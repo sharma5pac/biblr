@@ -5,6 +5,9 @@ import { BibleReader } from './components/reader/BibleReader'
 import { AudioBiblePage } from './components/audio/AudioBiblePage'
 import { CommunityPage } from './components/community/CommunityPage'
 import { AIStudyPage } from './components/ai/AIStudyPage'
+import { SettingsPage } from './components/settings/SettingsPage'
+import { BookmarksPage } from './components/bookmarks/BookmarksPage'
+import { SearchPage } from './components/search/SearchPage'
 import './index.css'
 
 import { useState, useEffect } from 'react'
@@ -61,6 +64,9 @@ function App() {
             <Route path="/audio" element={<AudioBiblePage />} />
             <Route path="/community" element={<CommunityPage />} />
             <Route path="/study" element={<AIStudyPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/bookmarks" element={<BookmarksPage />} />
+            <Route path="/search" element={<SearchPage />} />
           </Routes>
         </Layout>
       </BrowserRouter>

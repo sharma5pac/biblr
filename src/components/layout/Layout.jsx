@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, BookOpen, Users, Headphones, Menu, X, Sparkles, LogIn, Download } from 'lucide-react'
+import { Home, BookOpen, Users, Headphones, Menu, X, Sparkles, LogIn, Download, Search, Bookmark, Settings } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { AuthModal } from '../auth/AuthModal'
@@ -33,6 +33,12 @@ export function Layout({ children }) {
         { to: '/read', icon: BookOpen, label: 'Read' },
         { to: '/audio', icon: Headphones, label: 'Audio' },
         { to: '/community', icon: Users, label: 'Community' },
+    ]
+
+    const secondaryNavItems = [
+        { to: '/search', icon: Search, label: 'Search' },
+        { to: '/bookmarks', icon: Bookmark, label: 'Bookmarks' },
+        { to: '/settings', icon: Settings, label: 'Settings' },
     ]
 
     return (
@@ -72,6 +78,25 @@ export function Layout({ children }) {
                     </nav>
 
                     <div className="flex items-center gap-2">
+                        {/* Secondary Nav Icons (Desktop) */}
+                        <div className="hidden md:flex items-center gap-1 mr-2">
+                            {secondaryNavItems.map(item => (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    className={({ isActive }) =>
+                                        `p-2.5 rounded-lg transition-all ${isActive
+                                            ? 'bg-bible-gold/20 text-bible-gold'
+                                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                        }`
+                                    }
+                                    title={item.label}
+                                >
+                                    <item.icon className="w-5 h-5" />
+                                </NavLink>
+                            ))}
+                        </div>
+
                         {/* Install App Button (Desktop) */}
                         {deferredPrompt && (
                             <Button

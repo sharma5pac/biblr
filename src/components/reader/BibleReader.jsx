@@ -6,6 +6,7 @@ import { Button } from '../ui/Button'
 import { bibleBooks, translations } from '../../data/bibleData'
 import { getChapter } from '../../services/bibleService'
 import { AIService } from '../../services/aiService'
+import { addBookmark } from '../bookmarks/BookmarksPage'
 
 export function BibleReader() {
     const navigate = useNavigate()
@@ -100,6 +101,16 @@ export function BibleReader() {
                 console.error('Share failed:', error)
             }
         }
+    }
+
+    const handleSaveInsight = async () => {
+        await addBookmark({
+            reference: `${book.name} ${currentChapter}:${insightVerse}`,
+            text: verses.find(v => v.verse === insightVerse)?.text,
+            insight: insightText,
+            type: 'insight'
+        })
+        alert('Insight saved to Bookmarks!')
     }
 
     return (
@@ -315,7 +326,7 @@ export function BibleReader() {
                                         variant="ghost"
                                         size="sm"
                                         className="flex-1 gap-2"
-                                        title="Coming soon: Save to bookmarks"
+                                        onClick={handleSaveInsight}
                                     >
                                         <Bookmark className="w-4 h-4" /> Save
                                     </Button>
