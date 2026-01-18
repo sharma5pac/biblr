@@ -1,22 +1,41 @@
+import { useState, useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Loader2 } from 'lucide-react'
+
 import { Layout } from './components/layout/Layout'
-import { Hero } from './components/home/Hero'
-import { BibleReader } from './components/reader/BibleReader'
-import { AudioBiblePage } from './components/audio/AudioBiblePage'
-import { CommunityPage } from './components/community/CommunityPage'
-import { AIStudyPage } from './components/ai/AIStudyPage'
-import { SettingsPage } from './components/settings/SettingsPage'
-import { BookmarksPage } from './components/bookmarks/BookmarksPage'
-import { SearchPage } from './components/search/SearchPage'
 import './index.css'
 
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+// Lazy Loading Components
+const Hero = lazy(() => import('./components/home/Hero').then(module => ({ default: module.Hero })))
+const BibleReader = lazy(() => import('./components/reader/BibleReader').then(module => ({ default: module.BibleReader })))
+const AudioBiblePage = lazy(() => import('./components/audio/AudioBiblePage').then(module => ({ default: module.AudioBiblePage })))
+const CommunityPage = lazy(() => import('./components/community/CommunityPage').then(module => ({ default: module.CommunityPage })))
+const AIStudyPage = lazy(() => import('./components/ai/AIStudyPage').then(module => ({ default: module.AIStudyPage })))
+const SettingsPage = lazy(() => import('./components/settings/SettingsPage').then(module => ({ default: module.SettingsPage })))
+const BookmarksPage = lazy(() => import('./components/bookmarks/BookmarksPage').then(module => ({ default: module.BookmarksPage })))
+const SearchPage = lazy(() => import('./components/search/SearchPage').then(module => ({ default: module.SearchPage })))
+const Onboarding = lazy(() => import('./components/onboarding/Onboarding').then(module => ({ default: module.Onboarding })))
+const PrivacyPolicy = lazy(() => import('./components/legal/PrivacyPolicy').then(module => ({ default: module.PrivacyPolicy })))
+const TermsOfService = lazy(() => import('./components/legal/TermsOfService').then(module => ({ default: module.TermsOfService })))
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <Loader2 className="w-8 h-8 text-bible-gold animate-spin" />
+  </div>
+)
 
 function App() {
   const [isLoading, setIsLoading] = useState(true)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
+    // Check onboarding status
+    const hasOnboarded = localStorage.getItem('lumina_onboarding_completed')
+    if (!hasOnboarded) {
+      setShowOnboarding(true)
+    }
+
     // Simulate initial loading for intro
     const timer = setTimeout(() => setIsLoading(false), 2500)
     return () => clearTimeout(timer)
@@ -56,18 +75,26 @@ function App() {
         )}
       </AnimatePresence>
 
+      {!isLoading && showOnboarding && (
+        <Onboarding onComplete={() => setShowOnboarding(false)} />
+      )}
+
       <BrowserRouter>
         <Layout>
-          <Routes>
-            <Route path="/" element={<Hero />} />
-            <Route path="/read" element={<BibleReader />} />
-            <Route path="/audio" element={<AudioBiblePage />} />
-            <Route path="/community" element={<CommunityPage />} />
-            <Route path="/study" element={<AIStudyPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/bookmarks" element={<BookmarksPage />} />
-            <Route path="/search" element={<SearchPage />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Hero />} />
+              <Route path="/read" element={<BibleReader />} />
+              <Route path="/audio" element={<AudioBiblePage />} />
+              <Route path="/community" element={<CommunityPage />} />
+              <Route path="/study" element={<AIStudyPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/bookmarks" element={<BookmarksPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+            </Routes>
+          </Suspense>
         </Layout>
       </BrowserRouter>
     </>

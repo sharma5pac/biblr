@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { AuthModal } from '../auth/AuthModal'
 import { Button } from '../ui/Button'
+import { OfflineIndicator } from '../ui/OfflineIndicator'
+import { RatingPrompt } from '../ui/RatingPrompt'
 
 export function Layout({ children }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -43,6 +45,8 @@ export function Layout({ children }) {
 
     return (
         <div className="min-h-screen text-slate-100 flex flex-col">
+            <OfflineIndicator />
+            <RatingPrompt />
             {/* Floating Header with Glassmorphism */}
             <header className="sticky top-0 z-50 glass-dark">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
