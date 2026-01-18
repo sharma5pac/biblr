@@ -186,7 +186,7 @@ Keep it encouraging, theologically sound, and formatted in markdown.`
                     `**Covenant Faithfulness**: ${chapter >= 12 ? 'God promises land, seed, and blessing' : 'God\'s promises never fail'}`,
                     `**Human Fallenness**: ${chapter === 3 ? 'Sin separates us from God' : chapter <= 11 ? 'Humanity rebels against the Creator' : 'Yet God provides redemption'}`
                 ],
-                application: () => `${chapter === 1 ? 'Worship the Creator today. You are made in His image' : chapter >= 12 ? 'Trust God\'s promises even when you can\'t see the outcome' : 'Confess your need for God's grace'}.`
+                application: () => `${chapter === 1 ? 'Worship the Creator today. You are made in His image' : chapter >= 12 ? 'Trust God\'s promises even when you can\'t see the outcome' : 'Confess your need for God\'s grace'}.`
             },
             'Psalms': {
                 name: 'Psalms',

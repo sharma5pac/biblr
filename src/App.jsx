@@ -76,7 +76,9 @@ function App() {
       </AnimatePresence>
 
       {!isLoading && showOnboarding && (
-        <Onboarding onComplete={() => setShowOnboarding(false)} />
+        <Suspense fallback={null}>
+          <Onboarding onComplete={() => setShowOnboarding(false)} />
+        </Suspense>
       )}
 
       <BrowserRouter>
