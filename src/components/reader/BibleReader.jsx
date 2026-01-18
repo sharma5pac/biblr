@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, BookOpen, Bookmark, Share2, Sparkles, AlertCircle, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, BookOpen, Bookmark, Share2, Sparkles, AlertCircle, Loader2, X } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { bibleBooks, translations } from '../../data/bibleData'
 import { getChapter } from '../../services/bibleService'
+import { AIService } from '../../services/aiService'
 
 export function BibleReader() {
     const navigate = useNavigate()
@@ -18,6 +19,11 @@ export function BibleReader() {
     const [showBookSelector, setShowBookSelector] = useState(false)
     const [currentTranslation, setCurrentTranslation] = useState('web')
     const [fontSize, setFontSize] = useState('lg')
+
+    // AI Insights state
+    const [insightVerse, setInsightVerse] = useState(null)
+    const [insightText, setInsightText] = useState('')
+    const [insightLoading, setInsightLoading] = useState(false)
 
     const book = bibleBooks.find(b => b.id === currentBook)
 
@@ -41,11 +47,59 @@ export function BibleReader() {
     }, [currentBook, currentChapter, currentTranslation, book])
 
     const goToPrevChapter = () => {
-        if (currentChapter > 1) setCurrentChapter(c => c - 1)
+        if (currentChapter > 1) {
+            setCurrentChapter(c => c - 1)
+            setInsightVerse(null) // Close insight when changing chapters
+        }
     }
 
     const goToNextChapter = () => {
-        if (book && currentChapter < book.chapters) setCurrentChapter(c => c + 1)
+        if (book && currentChapter < book.chapters) {
+            setCurrentChapter(c => c + 1)
+            setInsightVerse(null)
+        }
+    }
+
+    const handleGetInsight = async (verseNumber) => {
+        const verseObj = verses.find(v => v.verse === verseNumber)
+        if (!verseObj) return
+
+        const verseRef = `${book.name} ${currentChapter}:${verseNumber}`
+        setInsightVerse(verseNumber)
+        setInsightLoading(true)
+        setSelectedVerse(null) // Close action panel
+
+        try {
+            const insight = await AIService.getVerseInsight(verseRef, verseObj.text)
+            setInsightText(insight)
+        } catch (error) {
+            console.error("Failed to fetch insight", error)
+            setInsightText("Unable to load insight. Please try again.")
+        } finally {
+            setInsightLoading(false)
+        }
+    }
+
+    const handleShare = async () => {
+        const shareData = {
+            title: `${book.name} ${currentChapter}:${insightVerse}`,
+            text: `"${verses.find(v => v.verse === insightVerse)?.text}"\n\n${insightText}`,
+            url: window.location.href
+        }
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData)
+            } else {
+                // Fallback: copy to clipboard
+                await navigator.clipboard.writeText(`${shareData.title}\n\n${shareData.text}`)
+                alert('Insight copied to clipboard!')
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Share failed:', error)
+            }
+        }
     }
 
     return (
@@ -179,18 +233,95 @@ export function BibleReader() {
                             variant="ghost"
                             size="sm"
                             className="rounded-full gap-1.5 text-bible-gold"
-                            onClick={() => {
-                                const verseObj = verses.find(v => v.verse === selectedVerse)
-                                navigate('/study', {
-                                    state: {
-                                        verseReference: `${book.name} ${currentChapter}:${selectedVerse}`,
-                                        verseText: verseObj?.text
-                                    }
-                                })
-                            }}
+                            onClick={() => handleGetInsight(selectedVerse)}
                         >
-                            <Sparkles className="w-4 h-4" /> Explain
+                            <Sparkles className="w-4 h-4" /> Insight
                         </Button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* AI Insight Panel */}
+            <AnimatePresence>
+                {insightVerse && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        className="fixed inset-x-0 bottom-20 md:bottom-4 max-w-2xl mx-auto px-4 z-50"
+                    >
+                        <div className="glass-dark rounded-2xl shadow-2xl overflow-hidden border border-white/10">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-4 border-b border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-bible-gold to-yellow-600 flex items-center justify-center shadow-lg shadow-bible-gold/20">
+                                        <Sparkles className="w-5 h-5 text-slate-900" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-white text-sm">Lumina AI Assistant</h3>
+                                        <p className="text-xs text-slate-400">{book.name} {currentChapter}:{insightVerse}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setInsightVerse(null)}
+                                    className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-5 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                                {insightLoading ? (
+                                    <div className="space-y-3 animate-pulse">
+                                        <div className="h-4 bg-white/10 rounded w-3/4" />
+                                        <div className="h-4 bg-white/10 rounded w-1/2" />
+                                        <div className="h-4 bg-white/10 rounded w-5/6" />
+                                        <div className="h-4 bg-white/10 rounded w-2/3" />
+                                    </div>
+                                ) : (
+                                    <div className="prose prose-invert prose-sm max-w-none">
+                                        {insightText.split('\n').map((line, i) => {
+                                            // Render markdown-style headers
+                                            if (line.startsWith('### ')) {
+                                                return <h3 key={i} className="text-bible-gold font-bold mb-2 mt-4 flex items-center gap-2">{line.replace('### ', '')}</h3>
+                                            }
+                                            // Render bullet points
+                                            if (line.trim().startsWith('*')) {
+                                                return <li key={i} className="text-slate-300 leading-relaxed ml-4">{line.replace(/^\*\s*/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>
+                                            }
+                                            // Regular text
+                                            if (line.trim()) {
+                                                return <p key={i} className="text-slate-300 leading-relaxed mb-2" dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>') }} />
+                                            }
+                                            return <br key={i} />
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer Actions */}
+                            {!insightLoading && (
+                                <div className="p-4 border-t border-white/5 flex gap-3">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="flex-1 gap-2"
+                                        onClick={handleShare}
+                                    >
+                                        <Share2 className="w-4 h-4" /> Share
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="flex-1 gap-2"
+                                        title="Coming soon: Save to bookmarks"
+                                    >
+                                        <Bookmark className="w-4 h-4" /> Save
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
