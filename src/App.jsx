@@ -19,6 +19,9 @@ const PrivacyPolicy = lazy(() => import('./components/legal/PrivacyPolicy').then
 const TermsOfService = lazy(() => import('./components/legal/TermsOfService').then(module => ({ default: module.TermsOfService })))
 
 
+const DailyManna = lazy(() => import('./components/daily/DailyManna').then(module => ({ default: module.DailyManna })))
+
+
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh]">
     <Loader2 className="w-8 h-8 text-bible-gold animate-spin" />
@@ -92,6 +95,7 @@ function App() {
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/bookmarks" element={<BookmarksPage />} />
               <Route path="/search" element={<SearchPage />} />
+              <Route path="/manna" element={<DailyManna />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
             </Routes>

@@ -29,11 +29,11 @@ const BOT_PERSONAS = {
 }
 
 export const AIService = {
-    async generateResponse(userMessage, context = '') {
+    async generateResponse(userMessage, context = '', persona = null) {
         if (API_KEY) {
-            return await this.callGemini(userMessage, context)
+            return await this.callGemini(userMessage, context, persona)
         } else {
-            return await this.simulateResponse(userMessage)
+            return await this.simulateResponse(userMessage, persona)
         }
     },
 
@@ -60,15 +60,20 @@ export const AIService = {
         }
     },
 
-    async callGemini(message, context) {
+    async callGemini(message, context, personaName = null) {
         try {
+            const persona = personaName ? BOT_PERSONAS[personaName] : null
+            const personaPrompt = persona
+                ? `Act as ${personaName}, a wise and kind ${persona.role}. Use biblical insight and encouragement.`
+                : `Act as a wise, kind community member and biblical scholar.`
+
             const prompt = `
-            You are a helpful Christian study assistant in a group chat. 
+            ${personaPrompt}
             Context: ${context}
             User said: "${message}"
             
-            Respond briefly (under 40 words) with encouragement or biblical insight.
-            Act as a wise, kind community member.
+            Respond briefly (under 60 words) with deep biblical insight.
+            Act in character if a persona was specified.
             `
 
             const response = await fetch(`${API_URL}?key=${API_KEY}`, {
@@ -80,17 +85,19 @@ export const AIService = {
             })
 
             const data = await response.json()
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "God bless you."
+            if (data.error) throw new Error(data.error.message)
+
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "May God guide your path."
 
             return {
                 text: text,
-                user: 'Lumina Bot',
-                avatar: 'AI'
+                user: personaName ? (personaName === 'Grace' ? 'Sister Grace' : 'Pastor David') : 'Lumina AI',
+                avatar: personaName ? (personaName === 'Grace' ? 'G' : 'D') : 'AI'
             }
 
         } catch (error) {
             console.error("AI Error", error)
-            return this.simulateResponse(message)
+            return this.simulateResponse(message, personaName)
         }
     },
 
@@ -120,11 +127,16 @@ Keep it encouraging, theologically sound, and formatted in markdown.`
                     })
                 })
                 const data = await response.json()
-                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text
 
+                if (data.error) {
+                    console.error("Gemini API Error:", data.error)
+                    throw new Error(data.error.message)
+                }
+
+                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text
                 if (aiText) return aiText
             } catch (e) {
-                console.warn("Gemini API failed, using template", e)
+                console.warn("Gemini API failed or returned error", e)
             }
         }
 
@@ -232,5 +244,92 @@ ${data.insights().map(i => `*   ${i}`).join('\n')}
 
 ### 🌿 Life Application
 ${data.application()}`
+    },
+
+    async getHopeBriefing(mood) {
+        if (API_KEY) {
+            try {
+                const prompt = `User is feeling: "${mood}". 
+                Generate a "Hope Briefing" spiritual narrative. 
+                Include:
+                1. A comforting scripture reference (exact Book, Chapter, and Verse).
+                2. The full text of that scripture.
+                3. A brief 'Hope Narrative' weaving the verse into their current mood (under 60 words).
+                4. A short, powerful 2-sentence prayer.
+                5. Suggest a 'Meditative Tone' (e.g., 'Rain in a Monastery', 'Cathedral Bells', 'Holy Chanting').
+                6. Identify the standard 3-letter Book ID (e.g., 'GEN', 'PSA', 'JHN', 'ROM', 'MAT').
+                
+                Format as JSON: 
+                { 
+                  "bookId": "psa", 
+                  "chapter": 46, 
+                  "verse": 10, 
+                  "reference": "Psalm 46:10",
+                  "text": "Be still, and know that I am God.", 
+                  "narrative": "...", 
+                  "prayer": "...", 
+                  "tone": "Rain in a Monastery" 
+                }`
+
+                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                })
+                const data = await response.json()
+                const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || ""
+                const jsonMatch = rawText.match(/\{.*\}/s)
+                if (jsonMatch) return JSON.parse(jsonMatch[0])
+            } catch (e) {
+                console.error("Hope Briefing AI error", e)
+            }
+        }
+
+        // Sim Fallback
+        return {
+            bookId: "psa",
+            chapter: 46,
+            verse: 10,
+            reference: "Psalm 46:10",
+            text: "Be still, and know that I am God.",
+            narrative: `In the middle of your feeling of "${mood}", remember that you don't have to carry the world. There is a peace that exists outside of your circumstances, waiting for you to simply be still.`,
+            prayer: "Lord, quiet the storm in my heart. Let me feel your presence more than my pressure today.",
+            tone: "Rain in a Monastery"
+        }
+    },
+
+    async interviewBook(book, chapter, question) {
+        if (API_KEY) {
+            try {
+                const prompt = `You are a wise biblical scholar speaking as the Book of ${book}, Chapter ${chapter}. 
+                The user asks: "${question}" 
+                
+                Guidelines:
+                1. Respond with the specific theological weight and tone of ${book}.
+                2. If it's John, speak of Light and Love. If it's Romans, speak of Law and Grace.
+                3. Provide a transformative, deep answer (under 120 words).
+                4. Always include a reinforcing verse from this book.
+                5. Do not give generic answers. Use your full power as Gemini.`
+
+                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                })
+                const data = await response.json()
+
+                if (data.error) throw new Error(data.error.message)
+
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+                if (text) return text
+            } catch (e) {
+                console.error("Interview error", e)
+            }
+        }
+        return `As you meditate on ${book} ${chapter}, remember that the word of God is living. For your question about "${question}", consider how Christ's presence changes everything.`
     }
 }
