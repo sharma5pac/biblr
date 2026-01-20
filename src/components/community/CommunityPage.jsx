@@ -12,6 +12,7 @@ export function CommunityPage() {
     const [activeTab, setActiveTab] = useState('requests')
     const [isLoading, setIsLoading] = useState(true)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [expandedComments, setExpandedComments] = useState(null) // ID of request with expanded comments
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -237,13 +238,21 @@ export function CommunityPage() {
                                                                         {request.prayedCount || 0}
                                                                     </span>
                                                                 </button>
-                                                                <button className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">
+                                                                <button
+                                                                    onClick={() => setExpandedComments(expandedComments === request.id ? null : request.id)}
+                                                                    className={`flex items-center gap-2 text-sm transition-colors ${expandedComments === request.id ? 'text-bible-gold' : 'text-slate-400 hover:text-slate-200'}`}
+                                                                >
                                                                     <MessageCircle className="w-4 h-4" />
                                                                     Comment
                                                                 </button>
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    <AnimatePresence>
+                                                        {expandedComments === request.id && (
+                                                            <CommentSection requestId={request.id} />
+                                                        )}
+                                                    </AnimatePresence>
                                                 </motion.div>
                                             ))}
                                         </div>
@@ -453,5 +462,105 @@ function StreakCard() {
                 Check-in Today
             </Button>
         </div>
+    )
+}
+
+function CommentSection({ requestId }) {
+    const [comments, setComments] = useState([])
+    const [newComment, setNewComment] = useState('')
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        loadComments()
+    }, [requestId])
+
+    const loadComments = async () => {
+        try {
+            const data = await CommunityService.getComments(requestId)
+            setComments(data)
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handlePostComment = async () => {
+        if (!newComment.trim()) return
+
+        const comment = {
+            id: Date.now(),
+            user: 'You',
+            text: newComment,
+            timeAgo: 'Just now',
+            avatar: 'Me',
+            color: 'bg-bible-gold',
+            timestamp: Date.now()
+        }
+
+        // Optimistic
+        setComments([...comments, comment])
+        setNewComment('')
+
+        try {
+            await CommunityService.addComment(requestId, comment)
+        } catch (e) {
+            console.error("Failed to post comment", e)
+        }
+    }
+
+    return (
+        <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-white/5 mt-4 pt-4 overflow-hidden"
+        >
+            <div className="space-y-3 mb-4">
+                {loading ? (
+                    <div className="flex justify-center py-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+                    </div>
+                ) : comments.length === 0 ? (
+                    <p className="text-center text-xs text-slate-500 py-2">No comments yet. Be the first!</p>
+                ) : (
+                    comments.map(comment => (
+                        <div key={comment.id} className="flex gap-3">
+                            <div className={`w-8 h-8 rounded-full ${comment.color} flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm`}>
+                                {comment.avatar}
+                            </div>
+                            <div className="bg-white/5 rounded-2xl rounded-tl-none px-3 py-2 text-sm text-slate-300 flex-1 border border-white/5">
+                                <div className="flex justify-between items-baseline mb-0.5">
+                                    <span className="font-bold text-slate-200 text-xs">{comment.user}</span>
+                                    <span className="text-[10px] text-slate-500">{comment.timeAgo}</span>
+                                </div>
+                                {comment.text}
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            <div className="flex gap-2 items-center">
+                <div className="flex-1 bg-white/5 border border-white/10 rounded-full px-1 py-1 pl-4 flex items-center focus-within:ring-2 focus-within:ring-bible-gold/30 transition-shadow">
+                    <input
+                        type="text"
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
+                        placeholder="Write a supportive comment..."
+                        className="bg-transparent border-none w-full text-sm text-white placeholder:text-slate-500 focus:outline-none"
+                    />
+                    <Button
+                        size="icon"
+                        onClick={handlePostComment}
+                        disabled={!newComment.trim()}
+                        className={`w-8 h-8 rounded-full ml-2 transition-all ${newComment.trim() ? 'bg-bible-gold text-slate-900' : 'bg-transparent text-slate-600'}`}
+                    >
+                        <Send className="w-4 h-4 ml-0.5" />
+                    </Button>
+                </div>
+            </div>
+        </motion.div>
     )
 }

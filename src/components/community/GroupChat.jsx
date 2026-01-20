@@ -54,7 +54,7 @@ export function GroupChat({ group, onBack }) {
         try {
             await CommunityService.sendGroupMessage(group.id, tempMsg.text)
             // Reload to ensure sync
-            // loadMessages() 
+            loadMessages()
         } catch (error) {
             console.error("Failed to send", error)
         }

@@ -146,6 +146,47 @@ export const CommunityService = {
         }
     },
 
+    async getComments(requestId) {
+        if (isFirebaseConfigured()) {
+            try {
+                const q = query(collection(firestore, 'requests', String(requestId), 'comments'), orderBy('timestamp', 'asc'))
+                const snapshot = await getDocs(q)
+                if (!snapshot.empty) return snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+            } catch (e) { }
+        }
+        const db = await dbPromise
+        const request = await db.get(STORE_REQUESTS, requestId)
+
+        // Mock data for initial requests (IDs 1, 2) if empty
+        if ((!request?.comments || request.comments.length === 0) && (requestId === 1 || requestId === 2)) {
+            return [
+                { id: 1, user: 'Sister Grace', text: 'Praying for you! 🙏', timeAgo: '1h ago', avatar: 'G', color: 'bg-purple-500' },
+                { id: 2, user: 'Pastor David', text: 'God is with you in this.', timeAgo: '30m ago', avatar: 'P', color: 'bg-blue-500' }
+            ]
+        }
+        return request?.comments || []
+    },
+
+    async addComment(requestId, comment) {
+        if (isFirebaseConfigured()) {
+            try {
+                await addDoc(collection(firestore, 'requests', String(requestId), 'comments'), { ...comment, timestamp: serverTimestamp() })
+                return
+            } catch (e) { }
+        }
+        const db = await dbPromise
+        const request = await db.get(STORE_REQUESTS, requestId)
+        if (request) {
+            if (!request.comments) request.comments = []
+            request.comments.push(comment)
+            // CRITICAL: Ensure the object has its key property set before putting back
+            request.id = requestId
+            await db.put(STORE_REQUESTS, request)
+        } else {
+            console.warn(`Request ${requestId} not found locally. Comment not saved.`)
+        }
+    },
+
     async getGroups() {
         // We'll keep groups local for now unless user wants them in DB too
         // Adding timeout just in case we move to DB later or if this call gets blocked
