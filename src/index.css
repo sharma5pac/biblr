@@ -10,33 +10,59 @@
   --font-serif: 'Merriweather', serif;
 }
 
+:root {
+  --bible-bg: #f8fafc;
+  --bible-text: #1e293b;
+  --bible-glass: rgba(255, 255, 255, 0.7);
+  --bible-glass-border: rgba(0, 0, 0, 0.1);
+  --overlay-start: rgba(248, 250, 252, 0.85);
+  --overlay-end: rgba(248, 250, 252, 0.95);
+  --app-font-size: 16px;
+}
+
+.dark {
+  --bible-bg: #0a0f1a;
+  --bible-text: #e2e8f0;
+  --bible-glass: rgba(10, 15, 26, 0.7);
+  --bible-glass-border: rgba(255, 255, 255, 0.08);
+  --overlay-start: rgba(10, 15, 26, 0.85);
+  --overlay-end: rgba(10, 15, 26, 0.95);
+}
+
 /* Base styles */
+html {
+  font-size: var(--app-font-size);
+  transition: font-size 0.3s ease;
+}
+
 body {
-  background-color: #0a0f1a;
+  background-color: var(--bible-bg);
   background-image:
-    linear-gradient(to bottom, rgba(10, 15, 26, 0.85), rgba(10, 15, 26, 0.95)),
+    linear-gradient(to bottom, var(--overlay-start), var(--overlay-end)),
     url('/church-bg.png');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
-  color: #e2e8f0;
+  color: var(--bible-text);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
+  font-size: 1rem;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Glassmorphism utilities */
 .glass {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bible-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--bible-glass-border);
 }
 
 .glass-dark {
-  background: rgba(10, 15, 26, 0.7);
+  background: var(--bible-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--bible-glass-border);
 }
 
 .glass-gold {
@@ -88,4 +114,13 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(251, 191, 36, 0.5);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

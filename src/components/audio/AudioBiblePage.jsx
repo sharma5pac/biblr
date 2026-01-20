@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Pause, Square, Volume2, BookOpen, ChevronDown, Loader2, X, Settings2 } from 'lucide-react'
+import { Play, Pause, Square, ChevronDown, Loader2, X, Settings2, Volume2, Music, SkipForward, SkipBack, Sparkles, BookOpen } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { bibleBooks } from '../../data/bibleData'
 import { getChapter } from '../../services/bibleService'
@@ -12,8 +12,7 @@ export function AudioBiblePage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState(null)
     const [showChapterModal, setShowChapterModal] = useState(false)
-    const [showVerseModal, setShowVerseModal] = useState(false)
-    const [bgMusicVolume, setBgMusicVolume] = useState(0.2)
+    const [bgMusicVolume, setBgMusicVolume] = useState(0.15)
     const [isMusicEnabled, setIsMusicEnabled] = useState(true)
     const [currentTrack, setCurrentTrack] = useState('/silent-hymn-1.mp3')
     const bgMusicRef = useRef(null)
@@ -21,9 +20,9 @@ export function AudioBiblePage() {
     const tracks = [
         { name: 'Silent Hymn I', src: '/silent-hymn-1.mp3' },
         { name: 'Silent Hymn II', src: '/silent-hymn-2.mp3' },
-        { name: 'Serenity I', src: '/serenity-1.mp3' },
-        { name: 'Serenity II', src: '/serenity-2.mp3' },
-        { name: 'Devotional', src: '/devotional.mp3' }
+        { name: 'Morning Dew', src: '/serenity-1.mp3' },
+        { name: 'Holy Spirit', src: '/serenity-2.mp3' },
+        { name: 'Abyss of Peace', src: '/devotional.mp3' }
     ]
 
     // Speech state
@@ -32,40 +31,42 @@ export function AudioBiblePage() {
     const [currentVerseIndex, setCurrentVerseIndex] = useState(0)
     const [selectedVoice, setSelectedVoice] = useState(null)
     const [voices, setVoices] = useState([])
-    const [rate, setRate] = useState(0.9)
+    const [rate, setRate] = useState(0.85)
 
     const synthRef = useRef(window.speechSynthesis)
     const utteranceRef = useRef(null)
 
     const book = bibleBooks.find(b => b.id === selectedBook)
 
-    // Handle Background Music Logic
+    // Handle Background Music
     useEffect(() => {
         if (!bgMusicRef.current) return
         bgMusicRef.current.volume = bgMusicVolume
         if (isSpeaking && !isPaused && isMusicEnabled) {
-            bgMusicRef.current.play().catch(e => console.log("Audio play failed", e))
+            bgMusicRef.current.play().catch(() => { })
         } else {
             bgMusicRef.current.pause()
         }
     }, [isSpeaking, isPaused, isMusicEnabled, bgMusicVolume, currentTrack])
 
-    // Load available voices
+    // Load available voices & Set Ava Multilingual as default
     useEffect(() => {
         const loadVoices = () => {
             const availableVoices = synthRef.current.getVoices()
-            // Filter for English voices but keep all variants (US, UK, etc)
-            const englishVoices = availableVoices.filter(v => v.lang.includes('en'))
-            setVoices(englishVoices)
+            setVoices(availableVoices)
 
-            // Try to find a default if none selected
-            if (!selectedVoice && englishVoices.length > 0) {
-                const preferred = englishVoices.find(v => v.name.includes('Zira') || v.name.includes('Google US English')) || englishVoices[0]
-                setSelectedVoice(preferred)
+            // Try to find "Ava Multilingual" or similar high-quality voices
+            const ava = availableVoices.find(v => v.name.toLowerCase().includes('ava') && v.name.toLowerCase().includes('multilingual'))
+            const fallback = availableVoices.find(v => v.name.includes('Google US English') || v.name.includes('Natural')) || availableVoices[0]
+
+            if (ava) {
+                setSelectedVoice(ava)
+            } else if (!selectedVoice && fallback) {
+                setSelectedVoice(fallback)
             }
         }
         loadVoices()
-        if (typeof window !== 'undefined' && window.speechSynthesis) {
+        if (window.speechSynthesis) {
             window.speechSynthesis.onvoiceschanged = loadVoices
         }
     }, [])
@@ -75,7 +76,6 @@ export function AudioBiblePage() {
         async function fetchChapter() {
             if (!book) return
             setIsLoading(true)
-            setError(null)
             try {
                 const data = await getChapter(book.name, selectedChapter, 'web')
                 setVerses(data.verses || [])
@@ -89,13 +89,6 @@ export function AudioBiblePage() {
         fetchChapter()
     }, [selectedBook, selectedChapter, book])
 
-    // Cleanup speech on unmount
-    useEffect(() => {
-        return () => {
-            synthRef.current.cancel()
-        }
-    }, [])
-
     const speakVerse = (verseIndex) => {
         if (verseIndex >= verses.length) {
             setIsSpeaking(false)
@@ -105,39 +98,27 @@ export function AudioBiblePage() {
 
         const verse = verses[verseIndex]
         const cleanText = verse.text.replace(/<[^>]*>/g, '')
-        const fullText = `Verse ${verse.verse}. ${cleanText}`
+        const utterance = new SpeechSynthesisUtterance(cleanText)
 
-        const utterance = new SpeechSynthesisUtterance(fullText)
         utterance.voice = selectedVoice
         utterance.rate = rate
         utterance.pitch = 1
 
         utterance.onend = () => {
             setCurrentVerseIndex(prev => prev + 1)
-            setTimeout(() => speakVerse(verseIndex + 1), 100)
-        }
-
-        utterance.onerror = (event) => {
-            if (event.error !== 'interrupted' && event.error !== 'canceled') {
-                console.error('Speech error:', event.error)
-            }
-            if (event.error !== 'interrupted') setIsSpeaking(false)
+            speakVerse(verseIndex + 1)
         }
 
         utteranceRef.current = utterance
         synthRef.current.cancel()
-        setTimeout(() => {
-            synthRef.current.speak(utterance)
-        }, 50)
+        synthRef.current.speak(utterance)
     }
 
     const handlePlay = () => {
-        setError(null)
         if (isPaused) {
             synthRef.current.resume()
             setIsPaused(false)
         } else {
-            synthRef.current.cancel()
             setIsSpeaking(true)
             setIsPaused(false)
             speakVerse(currentVerseIndex)
@@ -157,285 +138,231 @@ export function AudioBiblePage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 pb-20">
-            {/* Background Music Source */}
+        <div className="max-w-5xl mx-auto px-4 pb-32 pt-10">
             <audio ref={bgMusicRef} src={currentTrack} loop />
 
-            {/* Header */}
-            <div className="text-center space-y-2">
-                <h1 className="text-3xl md:text-4xl font-serif font-bold glow-text text-bible-gold">Audio Bible</h1>
-                <p className="text-slate-400">Listen to Scripture read aloud</p>
-            </div>
-
-            {/* Controls Bar */}
-            <div className="glass rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between sticky top-20 z-10 backdrop-blur-xl">
-
-                {/* Book & Chapter Selection */}
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                    <select
-                        value={selectedBook}
-                        onChange={(e) => { setSelectedBook(e.target.value); setSelectedChapter(1) }}
-                        className="bg-slate-900/50 text-white p-2 rounded-lg border border-white/10 focus:border-bible-gold outline-none flex-1 md:w-40"
-                    >
-                        {bibleBooks.map(b => (
-                            <option key={b.id} value={b.id}>{b.name}</option>
-                        ))}
-                    </select>
-
-                    <button
-                        onClick={() => setShowChapterModal(true)}
-                        className="bg-slate-900/50 text-white px-4 py-2 rounded-lg border border-white/10 hover:border-bible-gold transition-colors flex items-center gap-2 min-w-[80px] justify-between"
-                    >
-                        <span>Ch. {selectedChapter}</span>
-                        <ChevronDown className="w-4 h-4 text-bible-gold" />
-                    </button>
-
-                    {/* Verse Selector Modal Trigger */}
-                    <button
-                        onClick={() => setShowVerseModal(true)}
-                        disabled={verses.length === 0}
-                        className="bg-slate-900/50 text-white px-4 py-2 rounded-lg border border-white/10 hover:border-bible-gold transition-colors flex items-center gap-2 min-w-[90px] justify-between disabled:opacity-50"
-                    >
-                        <span>Vs. {verses[currentVerseIndex]?.verse || 1}</span>
-                        <ChevronDown className="w-4 h-4 text-bible-gold" />
-                    </button>
-                </div>
-
-                {/* Playback Controls */}
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={handleStop}
-                        disabled={!isSpeaking && !isPaused}
-                        className="p-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <Square className="w-5 h-5 fill-current" />
-                    </button>
-
-                    <button
-                        onClick={isSpeaking && !isPaused ? handlePause : handlePlay}
-                        disabled={isLoading || verses.length === 0}
-                        className="w-12 h-12 bg-gradient-to-r from-bible-gold to-yellow-500 rounded-full flex items-center justify-center text-slate-900 hover:scale-105 transition-transform shadow-lg shadow-bible-gold/30 disabled:opacity-50"
-                    >
-                        {isLoading ? (
-                            <Loader2 className="w-6 h-6 animate-spin" />
-                        ) : isSpeaking && !isPaused ? (
-                            <Pause className="w-6 h-6 fill-current" />
-                        ) : (
-                            <Play className="w-6 h-6 fill-current ml-0.5" />
-                        )}
-                    </button>
-
-                    <div className="flex items-center gap-2">
-                        {/* Music Toggle */}
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            className={`p-2 transition-colors ${isMusicEnabled ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-500 hover:text-slate-300'}`}
-                            onClick={() => setIsMusicEnabled(!isMusicEnabled)}
-                            title="Toggle Inspiration Music"
-                        >
-                            <Settings2 className="w-5 h-5" />
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Settings Panel (Visible when speaking or paused) */}
-            {(isSpeaking || isPaused) && (
+            <div className="text-center mb-10">
                 <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    className="glass rounded-xl p-4 flex flex-wrap gap-6 justify-center items-center text-sm mb-4"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="inline-block px-4 py-1.5 rounded-full bg-bible-gold/10 border border-bible-gold/20 text-bible-gold text-xs font-bold uppercase tracking-widest mb-4"
                 >
-                    {/* Music Controls */}
-                    <div className="flex items-center gap-3 bg-white/5 p-2 rounded-lg">
-                        <span className="text-bible-gold font-medium">BGM:</span>
-                        <select
-                            value={currentTrack}
-                            onChange={(e) => setCurrentTrack(e.target.value)}
-                            className="bg-slate-900 border border-white/10 rounded px-2 py-1 text-xs max-w-[120px] text-white outline-none focus:border-bible-gold"
-                        >
-                            {tracks.map(t => (
-                                <option key={t.src} value={t.src}>{t.name}</option>
-                            ))}
-                        </select>
-
-                        <input
-                            type="range"
-                            min="0"
-                            max="0.5"
-                            step="0.05"
-                            value={bgMusicVolume}
-                            onChange={(e) => setBgMusicVolume(parseFloat(e.target.value))}
-                            className="w-20 accent-emerald-500"
-                            disabled={!isMusicEnabled}
-                            title="Music Volume"
-                        />
-                    </div>
-
-                    <div className="w-px h-6 bg-white/10 hidden md:block" />
-
-                    {/* Voice Controls */}
-                    <div className="flex items-center gap-3 bg-white/5 p-2 rounded-lg">
-                        <span className="text-bible-gold font-medium">Voice:</span>
-                        <select
-                            value={selectedVoice?.name || ''}
-                            onChange={(e) => setSelectedVoice(voices.find(v => v.name === e.target.value))}
-                            className="bg-slate-900 border border-white/10 rounded px-2 py-1 text-xs max-w-[180px] text-white outline-none focus:border-bible-gold"
-                        >
-                            {voices.map(v => (
-                                <option key={v.name} value={v.name}>{v.name.replace('Microsoft ', '').replace('Google ', '')}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Speed Control */}
-                    <div className="flex items-center gap-2 bg-white/5 p-2 rounded-lg">
-                        <span className="text-slate-400">Speed:</span>
-                        <input
-                            type="range"
-                            min="0.5"
-                            max="1.5"
-                            step="0.1"
-                            value={rate}
-                            onChange={(e) => setRate(parseFloat(e.target.value))}
-                            className="w-16 accent-bible-gold"
-                        />
-                        <span className="text-white w-8 text-xs">{rate}x</span>
-                    </div>
+                    Meditative Audio Experience
                 </motion.div>
-            )}
+                <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-4">The Audio Word</h1>
+                <p className="text-slate-400 max-w-lg mx-auto italic">"Faith comes by hearing, and hearing by the word of God."</p>
+            </div>
 
-            {/* Chapter Selection Modal */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                {/* Left Column: Player UX */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Premium Player Card */}
+                    <div className="glass rounded-[3rem] p-8 md:p-12 relative overflow-hidden shadow-2xl border border-white/10">
+                        {/* Decorative Gradient */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-bible-gold/10 blur-[100px] -mr-32 -mt-32 rounded-full" />
+
+                        <div className="relative z-10 flex flex-col items-center text-center">
+                            <div className="w-48 h-48 md:w-64 md:h-64 rounded-[2.5rem] bg-gradient-to-br from-bible-gold to-yellow-700 p-1 mb-8 shadow-2xl transform hover:scale-105 transition-transform duration-500 group">
+                                <div className="w-full h-full rounded-[2.3rem] bg-slate-900 flex flex-col items-center justify-center overflow-hidden relative">
+                                    <BookOpen className="w-20 h-20 text-bible-gold/20 absolute" />
+                                    <div className="text-4xl md:text-6xl font-serif font-bold text-bible-gold z-10">{selectedChapter}</div>
+                                    <div className="text-xs uppercase tracking-[0.3em] text-bible-gold/60 mt-2 z-10 font-bold">{book?.name}</div>
+
+                                    {/* Wave Animation when playing */}
+                                    {isSpeaking && !isPaused && (
+                                        <div className="absolute bottom-6 flex gap-1 items-end h-8">
+                                            {[1, 2, 3, 4, 5, 6].map(i => (
+                                                <motion.div
+                                                    key={i}
+                                                    animate={{ height: [8, 24, 12, 28, 10] }}
+                                                    transition={{ repeat: Infinity, duration: 0.5 + i * 0.1, ease: "easeInOut" }}
+                                                    className="w-1.5 bg-bible-gold/40 rounded-full"
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="space-y-1 mb-10">
+                                <h2 className="text-2xl md:text-3xl font-serif font-bold text-white">{book?.name} Chapter {selectedChapter}</h2>
+                                <p className="text-bible-gold/60 font-medium">Verse {currentVerseIndex + 1} of {verses.length}</p>
+                            </div>
+
+                            {/* Main Player Controls */}
+                            <div className="flex items-center gap-6 md:gap-10">
+                                <button onClick={() => setCurrentVerseIndex(Math.max(0, currentVerseIndex - 1))} className="p-3 text-white/40 hover:text-white transition-colors">
+                                    <SkipBack className="w-8 h-8" />
+                                </button>
+
+                                <button
+                                    onClick={isSpeaking && !isPaused ? handlePause : handlePlay}
+                                    className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-bible-gold text-slate-900 flex items-center justify-center shadow-[0_0_50px_rgba(234,179,8,0.3)] hover:scale-110 active:scale-95 transition-all group"
+                                >
+                                    {isSpeaking && !isPaused ? <Pause className="w-10 h-10 fill-current" /> : <Play className="w-10 h-10 fill-current ml-2" />}
+                                </button>
+
+                                <button onClick={() => setCurrentVerseIndex(Math.min(verses.length - 1, currentVerseIndex + 1))} className="p-3 text-white/40 hover:text-white transition-colors">
+                                    <SkipForward className="w-8 h-8" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Progress & Text View */}
+                    <div className="glass rounded-3xl p-6 md:p-8 min-h-[200px] border border-white/5 bg-slate-900/40">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="font-bold text-white flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-bible-gold" />
+                                Live Scripture
+                            </h3>
+                            <button onClick={handleStop} className="text-xs text-slate-500 hover:text-red-400 flex items-center gap-1 transition-colors">
+                                <Square className="w-3 h-3 fill-current" /> Stop Reader
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {isLoading ? (
+                                <div className="space-y-3 animate-pulse">
+                                    <div className="h-4 bg-white/5 rounded w-full" />
+                                    <div className="h-4 bg-white/5 rounded w-3/4" />
+                                </div>
+                            ) : (
+                                <p className="text-lg md:text-xl font-serif leading-relaxed text-slate-300">
+                                    <span className="text-bible-gold font-bold mr-2">{verses[currentVerseIndex]?.verse}</span>
+                                    {verses[currentVerseIndex]?.text.replace(/<[^>]*>/g, '')}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Column: Settings & Selection */}
+                <div className="space-y-6">
+                    {/* Book/Chapter Selection */}
+                    <div className="glass rounded-3xl p-6 border border-white/10 space-y-4">
+                        <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-bible-gold" /> Content
+                        </h4>
+                        <div className="space-y-3">
+                            <select
+                                value={selectedBook}
+                                onChange={(e) => { setSelectedBook(e.target.value); setSelectedChapter(1) }}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-bible-gold outline-none text-sm appearance-none"
+                                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23EAB308\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
+                            >
+                                {bibleBooks.map(b => (
+                                    <option key={b.id} value={b.id} className="bg-slate-900">{b.name}</option>
+                                ))}
+                            </select>
+
+                            <button
+                                onClick={() => setShowChapterModal(true)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white hover:border-bible-gold transition-colors text-sm flex justify-between items-center"
+                            >
+                                <span>Chapter {selectedChapter}</span>
+                                <ChevronDown className="w-4 h-4 text-bible-gold" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Audio Customization */}
+                    <div className="glass rounded-3xl p-6 border border-white/10 space-y-6">
+                        <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <Settings2 className="w-4 h-4 text-bible-gold" /> Customization
+                        </h4>
+
+                        {/* Voice Selection */}
+                        <div className="space-y-2">
+                            <label className="text-xs text-slate-500 font-bold uppercase tracking-tighter">Narrator Voice</label>
+                            <select
+                                value={selectedVoice?.name || ''}
+                                onChange={(e) => setSelectedVoice(voices.find(v => v.name === e.target.value))}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-bible-gold outline-none text-xs"
+                            >
+                                {voices.map(v => (
+                                    <option key={v.name} value={v.name} className="bg-slate-900">{v.name.replace('Microsoft ', '').replace('Google ', '')}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Music Selection */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label className="text-xs text-slate-500 font-bold uppercase tracking-tighter">Inspiration Music</label>
+                                <button
+                                    onClick={() => setIsMusicEnabled(!isMusicEnabled)}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded ${isMusicEnabled ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}
+                                >
+                                    {isMusicEnabled ? 'ON' : 'OFF'}
+                                </button>
+                            </div>
+                            <select
+                                value={currentTrack}
+                                onChange={(e) => setCurrentTrack(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-bible-gold outline-none text-xs disabled:opacity-30"
+                                disabled={!isMusicEnabled}
+                            >
+                                {tracks.map(t => (
+                                    <option key={t.src} value={t.src} className="bg-slate-900">{t.name}</option>
+                                ))}
+                            </select>
+                            <div className="flex items-center gap-3 px-1">
+                                <Volume2 className="w-3 h-3 text-slate-500" />
+                                <input
+                                    type="range" min="0" max="0.5" step="0.05"
+                                    value={bgMusicVolume}
+                                    onChange={(e) => setBgMusicVolume(parseFloat(e.target.value))}
+                                    className="flex-1 accent-bible-gold h-1"
+                                    disabled={!isMusicEnabled}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Speech Rate */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label className="text-xs text-slate-500 font-bold uppercase tracking-tighter">Reading Speed</label>
+                                <span className="text-[10px] font-bold text-bible-gold">{rate}x</span>
+                            </div>
+                            <input
+                                type="range" min="0.5" max="1.5" step="0.1"
+                                value={rate}
+                                onChange={(e) => setRate(parseFloat(e.target.value))}
+                                className="w-full accent-bible-gold h-1"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Chapter Modal */}
             <AnimatePresence>
                 {showChapterModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-                        onClick={() => setShowChapterModal(false)}
-                    >
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4" onClick={() => setShowChapterModal(false)}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto"
+                            className="bg-slate-900 border border-white/10 rounded-[2rem] p-8 w-full max-w-2xl max-h-[70vh] overflow-y-auto no-scrollbar"
                             onClick={e => e.stopPropagation()}
                         >
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-serif font-bold text-bible-gold">{book?.name} Chapters</h3>
-                                <button onClick={() => setShowChapterModal(false)} className="text-slate-400 hover:text-white">
-                                    <X className="w-6 h-6" />
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-5 md:grid-cols-6 gap-3">
+                            <h3 className="text-2xl font-serif font-bold text-bible-gold mb-8">Select Chapter</h3>
+                            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
                                 {book && Array.from({ length: book.chapters }, (_, i) => (
                                     <button
                                         key={i + 1}
-                                        onClick={() => { setSelectedChapter(i + 1); setShowChapterModal(false) }}
-                                        className={`p-3 rounded-xl font-medium transition-all ${selectedChapter === i + 1
-                                                ? 'bg-bible-gold text-slate-900 font-bold shadow-lg shadow-bible-gold/20'
-                                                : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
-                                            }`}
+                                        onClick={() => { setSelectedChapter(i + 1); setShowChapterModal(false); handleStop() }}
+                                        className={`h-12 w-full rounded-xl font-bold transition-all ${selectedChapter === i + 1 ? 'bg-bible-gold text-slate-900 shadow-lg' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
                                     >
                                         {i + 1}
                                     </button>
                                 ))}
                             </div>
                         </motion.div>
-                    </motion.div>
-                )}
-
-                {/* Verse Selection Modal */}
-                {showVerseModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-                        onClick={() => setShowVerseModal(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-serif font-bold text-bible-gold">{book?.name} {selectedChapter} Verses</h3>
-                                <button onClick={() => setShowVerseModal(false)} className="text-slate-400 hover:text-white">
-                                    <X className="w-6 h-6" />
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-5 md:grid-cols-6 gap-3">
-                                {verses.map((v, i) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => {
-                                            setCurrentVerseIndex(i);
-                                            setShowVerseModal(false);
-                                            // Auto-play logic
-                                            if (isSpeaking) {
-                                                handleStop();
-                                                setTimeout(() => {
-                                                    setCurrentVerseIndex(i);
-                                                    setIsSpeaking(true);
-                                                    speakVerse(i);
-                                                }, 100);
-                                            }
-                                        }}
-                                        className={`p-3 rounded-xl font-medium transition-all ${currentVerseIndex === i
-                                                ? 'bg-bible-gold text-slate-900 font-bold shadow-lg shadow-bible-gold/20'
-                                                : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
-                                            }`}
-                                    >
-                                        {v.verse}
-                                    </button>
-                                ))}
-                            </div>
-                        </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
-
-            {/* Verse Display */}
-            <div className="glass rounded-2xl p-6 md:p-8 min-h-[50vh]">
-                {isLoading ? (
-                    <div className="space-y-4 animate-pulse">
-                        {[1, 2, 3, 4].map(i => (
-                            <div key={i} className="h-4 bg-white/5 rounded w-full"></div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="space-y-4 text-lg leading-relaxed">
-                        {verses.map((verse, index) => (
-                            <div
-                                key={verse.verse}
-                                id={`verse-${index}`}
-                                onClick={() => {
-                                    handleStop()
-                                    setTimeout(() => {
-                                        setCurrentVerseIndex(index)
-                                        setIsSpeaking(true)
-                                        speakVerse(index)
-                                    }, 50)
-                                }}
-                                className={`p-2 rounded-lg transition-colors cursor-pointer ${currentVerseIndex === index
-                                    ? 'bg-bible-gold/10 border-l-2 border-bible-gold pl-3'
-                                    : 'hover:bg-white/5 border-l-2 border-transparent pl-3'
-                                    }`}
-                            >
-                                <span className="text-xs font-bold text-bible-gold mr-2 align-top opacity-75">{verse.verse}</span>
-                                <span className={currentVerseIndex === index ? 'text-white font-medium' : 'text-slate-300'}>
-                                    {verse.text.replace(/<[^>]*>/g, '')}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
         </div>
     )
 }

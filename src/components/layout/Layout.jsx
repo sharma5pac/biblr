@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home, BookOpen, Users, Headphones, Menu, X, Sparkles, LogIn, Download, Search, Bookmark, Settings } from 'lucide-react'
+import { Home, BookOpen, Users, Headphones, Menu, X, Sparkles, LogIn, Download, Search, Bookmark, Settings, ShieldCheck } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { AuthModal } from '../auth/AuthModal'
@@ -33,8 +33,7 @@ export function Layout({ children }) {
     const navItems = [
         { to: '/', icon: Home, label: 'Home' },
         { to: '/read', icon: BookOpen, label: 'Read' },
-        { to: '/audio', icon: Headphones, label: 'Audio' },
-        { to: '/community', icon: Users, label: 'Community' },
+        { to: '/audio', icon: Headphones, label: 'Audio' }
     ]
 
     const secondaryNavItems = [
@@ -115,13 +114,25 @@ export function Layout({ children }) {
                         )}
                         {/* User Menu / Login Button */}
                         {user ? (
-                            <div className="hidden md:flex items-center gap-3 pl-4 border-l border-white/10">
+                            <div className="hidden md:flex items-center gap-3 pl-4 border-l border-bible-glass-border">
                                 <div className="text-right">
-                                    <div className="text-sm font-medium text-white">{user.name}</div>
-                                    <button onClick={logout} className="text-xs text-slate-400 hover:text-bible-gold transition-colors">Sign Out</button>
+                                    <div className="text-sm font-medium text-bible-text">{user.name}</div>
+                                    <button onClick={logout} className="text-xs text-bible-text/40 hover:text-bible-gold transition-colors">Sign Out</button>
                                 </div>
-                                <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold border-2 border-slate-600">
-                                    {user.avatar}
+                                <div className="w-10 h-10 rounded-full overflow-hidden bg-bible-text/5 flex items-center justify-center text-sm font-bold border-2 border-bible-glass-border shadow-lg">
+                                    {user.avatar ? (
+                                        <img
+                                            src={user.avatar}
+                                            alt={user.name}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                e.target.onerror = null;
+                                                e.target.src = `https://ui-avatars.com/api/?name=${user.name}&background=EAB308&color=0F172A`;
+                                            }}
+                                        />
+                                    ) : (
+                                        user.name[0]
+                                    )}
                                 </div>
                             </div>
                         ) : (
@@ -157,8 +168,20 @@ export function Layout({ children }) {
                             <div className="p-4 border-b border-white/5 mb-2">
                                 {user ? (
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold">
-                                            {user.avatar}
+                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center text-sm font-bold border border-white/10">
+                                            {user.avatar ? (
+                                                <img
+                                                    src={user.avatar}
+                                                    alt={user.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.src = `https://ui-avatars.com/api/?name=${user.name}&background=EAB308&color=0F172A`;
+                                                    }}
+                                                />
+                                            ) : (
+                                                user.name[0]
+                                            )}
                                         </div>
                                         <div className="flex-1">
                                             <div className="font-medium text-white">{user.name}</div>

@@ -10,7 +10,6 @@ import './index.css'
 const Hero = lazy(() => import('./components/home/Hero').then(module => ({ default: module.Hero })))
 const BibleReader = lazy(() => import('./components/reader/BibleReader').then(module => ({ default: module.BibleReader })))
 const AudioBiblePage = lazy(() => import('./components/audio/AudioBiblePage').then(module => ({ default: module.AudioBiblePage })))
-const CommunityPage = lazy(() => import('./components/community/CommunityPage').then(module => ({ default: module.CommunityPage })))
 const AIStudyPage = lazy(() => import('./components/ai/AIStudyPage').then(module => ({ default: module.AIStudyPage })))
 const SettingsPage = lazy(() => import('./components/settings/SettingsPage').then(module => ({ default: module.SettingsPage })))
 const BookmarksPage = lazy(() => import('./components/bookmarks/BookmarksPage').then(module => ({ default: module.BookmarksPage })))
@@ -18,6 +17,7 @@ const SearchPage = lazy(() => import('./components/search/SearchPage').then(modu
 const Onboarding = lazy(() => import('./components/onboarding/Onboarding').then(module => ({ default: module.Onboarding })))
 const PrivacyPolicy = lazy(() => import('./components/legal/PrivacyPolicy').then(module => ({ default: module.PrivacyPolicy })))
 const TermsOfService = lazy(() => import('./components/legal/TermsOfService').then(module => ({ default: module.TermsOfService })))
+
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh]">
@@ -88,7 +88,6 @@ function App() {
               <Route path="/" element={<Hero />} />
               <Route path="/read" element={<BibleReader />} />
               <Route path="/audio" element={<AudioBiblePage />} />
-              <Route path="/community" element={<CommunityPage />} />
               <Route path="/study" element={<AIStudyPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/bookmarks" element={<BookmarksPage />} />

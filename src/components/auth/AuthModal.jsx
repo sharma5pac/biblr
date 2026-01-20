@@ -1,21 +1,17 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Mail, Lock, Sparkles, Loader2 } from 'lucide-react'
+import { X, LogIn, Sparkles, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useAuth } from '../../context/AuthContext'
 
 export function AuthModal({ isOpen, onClose }) {
-    const [isLogin, setIsLogin] = useState(true)
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
-    const { login } = useAuth()
+    const { loginWithGoogle } = useAuth()
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
+    const handleGoogleSignIn = async () => {
         setLoading(true)
         try {
-            await login(email, password)
+            await loginWithGoogle()
             onClose()
         } catch (error) {
             console.error(error)
@@ -40,7 +36,7 @@ export function AuthModal({ isOpen, onClose }) {
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
                             onClick={e => e.stopPropagation()}
-                            className="w-full max-w-md glass-dark rounded-2xl p-8 relative"
+                            className="w-full max-w-md glass-dark rounded-2xl p-8 relative border border-white/10"
                         >
                             <button
                                 onClick={onClose}
@@ -54,68 +50,32 @@ export function AuthModal({ isOpen, onClose }) {
                                     <Sparkles className="w-8 h-8 text-slate-900" />
                                 </div>
                                 <h2 className="text-2xl font-serif font-bold text-white mb-2">
-                                    {isLogin ? 'Welcome Back' : 'Create Account'}
+                                    Join Lumina
                                 </h2>
                                 <p className="text-slate-400">
-                                    {isLogin
-                                        ? 'Sign in to access your bookmarks and prayers'
-                                        : 'Join the Lumina community today'}
+                                    Sign in to access your bookmarks, prayers, and the community.
                                 </p>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300 ml-1">Email</label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                        <input
-                                            type="email"
-                                            value={email}
-                                            onChange={e => setEmail(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-bible-gold/50 text-white placeholder:text-slate-600 transition-colors"
-                                            placeholder="you@example.com"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300 ml-1">Password</label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                        <input
-                                            type="password"
-                                            value={password}
-                                            onChange={e => setPassword(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-bible-gold/50 text-white placeholder:text-slate-600 transition-colors"
-                                            placeholder="••••••••"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
+                            <div className="space-y-4">
                                 <Button
-                                    type="submit"
-                                    className="w-full h-12 text-lg font-medium glow-gold mt-6"
+                                    onClick={handleGoogleSignIn}
+                                    className="w-full h-14 text-lg font-semibold bg-white text-slate-900 hover:bg-slate-100 flex items-center justify-center gap-3 transition-all active:scale-95"
                                     disabled={loading}
                                 >
                                     {loading ? (
-                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <Loader2 className="w-6 h-6 animate-spin" />
                                     ) : (
-                                        isLogin ? 'Sign In' : 'Create Account'
+                                        <>
+                                            <LogIn className="w-6 h-6" />
+                                            Sign in with Google
+                                        </>
                                     )}
                                 </Button>
-                            </form>
 
-                            <div className="mt-6 text-center">
-                                <p className="text-sm text-slate-400">
-                                    {isLogin ? "Don't have an account? " : "Already have an account? "}
-                                    <button
-                                        onClick={() => setIsLogin(!isLogin)}
-                                        className="text-bible-gold hover:text-yellow-400 font-medium transition-colors"
-                                    >
-                                        {isLogin ? 'Sign up' : 'Log in'}
-                                    </button>
+                                <p className="text-center text-xs text-slate-500 pt-4">
+                                    By signing in, you agree to our <br />
+                                    <span className="underline cursor-pointer hover:text-slate-300">Privacy Policy</span> and <span className="underline cursor-pointer hover:text-slate-300">Terms of Service</span>.
                                 </p>
                             </div>
                         </motion.div>
