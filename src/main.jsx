@@ -9,13 +9,11 @@ import { SettingsProvider } from './context/SettingsContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <AuthProvider>
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>
-      </AuthProvider>
-    </ErrorBoundary>
-  </StrictMode>,
+  <ErrorBoundary>
+    <AuthProvider>
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    </AuthProvider>
+  </ErrorBoundary>,
 )

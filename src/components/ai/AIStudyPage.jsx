@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, ArrowLeft, BookOpen, MessageCircle, Share2, Loader2, Zap, Send, X } from 'lucide-react'
+import { Sparkles, ArrowLeft, BookOpen, MessageCircle, Share2, Loader2, Zap, Send, X, Bookmark, Check } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { AIService } from '../../services/aiService'
+import { BookmarkService } from '../../services/bookmarkService'
 
 export function AIStudyPage() {
     const location = useLocation()
@@ -21,6 +22,7 @@ export function AIStudyPage() {
     const [chatInput, setChatInput] = useState('')
     const [chatMessages, setChatMessages] = useState([])
     const [isChatLoading, setIsChatLoading] = useState(false)
+    const [showToast, setShowToast] = useState(false)
     const chatEndRef = useRef(null)
 
     useEffect(() => {
@@ -76,6 +78,27 @@ export function AIStudyPage() {
         }
     }
 
+    const handleShare = async () => {
+        const shareText = `Deep Study on ${verseReference}\n\n${response.replace(/<[^>]*>/g, '')}\n\nShared via Lumina Bible`
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `Deep Study: ${verseReference}`,
+                    text: shareText,
+                })
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    navigator.clipboard.writeText(shareText)
+                    alert('Study copied to clipboard!')
+                }
+            }
+        } else {
+            navigator.clipboard.writeText(shareText)
+            alert('Study copied to clipboard!')
+        }
+    }
+
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-20 pt-4 px-4 overflow-x-hidden">
             <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2 text-slate-400 hover:text-white mb-2">
@@ -102,7 +125,7 @@ export function AIStudyPage() {
                             </div>
                             <span>{verseReference}</span>
                         </div>
-                        <p className="text-2xl md:text-3xl font-serif leading-relaxed text-white italic">
+                        <p className="text-2xl md:text-3xl font-serif leading-relaxed text-slate-900 dark:text-white italic">
                             "{verseText}"
                         </p>
                     </motion.div>
@@ -119,7 +142,7 @@ export function AIStudyPage() {
                                 <Sparkles className="w-6 h-6 text-slate-900" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-serif font-bold text-white tracking-tight">Lumina Depth Analysis</h2>
+                                <h2 className="text-2xl font-serif font-bold text-slate-900 dark:text-white tracking-tight">Lumina Depth Analysis</h2>
                                 <p className="text-[10px] text-bible-gold font-bold uppercase tracking-[0.2em] opacity-70">Gemini Powered Theology</p>
                             </div>
                         </div>
@@ -130,7 +153,7 @@ export function AIStudyPage() {
                                 <p className="font-serif italic text-slate-400">Consulting the ancient wisdom...</p>
                             </div>
                         ) : (
-                            <div className="prose prose-invert max-w-none prose-headings:text-bible-gold prose-p:text-slate-200 prose-p:leading-relaxed prose-p:italic font-serif">
+                            <div className="prose dark:prose-invert max-w-none prose-headings:text-bible-gold prose-p:text-slate-700 dark:prose-p:text-slate-200 prose-p:leading-relaxed prose-p:italic font-serif">
                                 <div dangerouslySetInnerHTML={{
                                     __html: response
                                         .replace(/\*\*(.*?)\*\*/g, '<strong class="text-bible-gold font-bold not-italic">$1</strong>')
@@ -151,8 +174,23 @@ export function AIStudyPage() {
                                 >
                                     <MessageCircle className="w-5 h-5" /> Ask Follow-up
                                 </Button>
-                                <Button variant="ghost" className="gap-2 h-14 px-8 rounded-2xl glass border border-white/10 text-slate-400">
-                                    <Share2 className="w-5 h-5" /> Share Insight
+                                <Button
+                                    onClick={() => {
+                                        BookmarkService.add({
+                                            type: 'insight',
+                                            reference: verseReference,
+                                            text: response,
+                                            timestamp: Date.now()
+                                        })
+                                        setShowToast(true)
+                                        setTimeout(() => setShowToast(false), 3000)
+                                    }}
+                                    className="gap-2 h-14 px-8 rounded-2xl glass border border-white/10 text-bible-gold hover:text-white hover:bg-white/5 transition-colors"
+                                >
+                                    <Bookmark className="w-5 h-5" /> Save Study
+                                </Button>
+                                <Button onClick={handleShare} variant="ghost" className="gap-2 h-14 px-8 rounded-2xl glass border border-white/10 text-slate-400 font-bold hover:text-white transition-colors">
+                                    <Share2 className="w-5 h-5" /> Share
                                 </Button>
                             </motion.div>
                         )}
@@ -173,7 +211,7 @@ export function AIStudyPage() {
                                     <div className="w-8 h-8 rounded-lg bg-bible-gold/10 flex items-center justify-center text-bible-gold">
                                         <MessageCircle className="w-4 h-4" />
                                     </div>
-                                    <h3 className="font-bold text-white text-sm uppercase tracking-widest">Follow-up Dialogue</h3>
+                                    <h3 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-widest">Follow-up Dialogue</h3>
                                 </div>
                                 <button onClick={() => setShowChat(false)} className="text-slate-500 hover:text-white transition-colors">
                                     <X className="w-5 h-5" />
@@ -190,8 +228,8 @@ export function AIStudyPage() {
                                 {chatMessages.map((msg, idx) => (
                                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                         <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
-                                                ? 'bg-bible-gold text-slate-900 rounded-tr-none font-bold'
-                                                : 'bg-white/5 text-slate-200 border border-white/10 rounded-tl-none italic font-serif'
+                                            ? 'bg-bible-gold text-slate-900 rounded-tr-none font-bold'
+                                            : 'bg-white dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-tl-none italic font-serif'
                                             }`}>
                                             {msg.text}
                                         </div>
@@ -208,14 +246,14 @@ export function AIStudyPage() {
                             </div>
 
                             <div className="p-6 border-t border-white/5">
-                                <div className="flex items-center gap-2 bg-white/5 rounded-2xl p-2 border border-white/10 focus-within:border-bible-gold/50 transition-colors">
+                                <div className="flex items-center gap-2 bg-white/50 dark:bg-white/5 rounded-2xl p-2 border border-black/10 dark:border-white/10 focus-within:border-bible-gold/50 transition-colors">
                                     <input
                                         type="text"
                                         value={chatInput}
                                         onChange={(e) => setChatInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleFollowUp()}
                                         placeholder="Ask for clarification..."
-                                        className="flex-1 bg-transparent border-none focus:ring-0 text-white text-sm px-4"
+                                        className="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white text-sm px-4"
                                     />
                                     <button
                                         onClick={handleFollowUp}
@@ -229,13 +267,26 @@ export function AIStudyPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* Toast Notification */}
+                <AnimatePresence>
+                    {showToast && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                            className="fixed bottom-12 left-1/2 -translate-x-1/2 glass-dark bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-6 py-3 rounded-full flex items-center gap-3 shadow-2xl z-[60]"
+                        >
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                <Check className="w-4 h-4" />
+                            </div>
+                            <span className="font-bold text-sm">Study Saved to Bookmarks</span>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
-        </div>
+        </div >
     )
 }
 
-function Loader2({ className }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 2v4" /><path d="m16.2 7.8 2.9-2.9" /><path d="M18 12h4" /><path d="m16.2 16.2 2.9(2.9)" /><path d="M12 18v4" /><path d="m4.9 19.1 2.9-2.9" /><path d="M2 12h4" /><path d="m4.9 4.9 2.9 2.9" /></svg>
-    )
-}
+

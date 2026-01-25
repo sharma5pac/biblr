@@ -1,0 +1,11 @@
+{
+  "appId": "com.bylumina.bible",
+  "appName": "Lumina Bible",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "autoHide": true
+    }
+  }
+}

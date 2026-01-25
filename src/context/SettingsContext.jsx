@@ -5,41 +5,28 @@ const SettingsContext = createContext(null);
 export function SettingsProvider({ children }) {
     const [settings, setSettings] = useState(() => {
         const saved = localStorage.getItem('lumina_settings');
-        return saved ? JSON.parse(saved) : {
-            theme: 'dark',
-            fontSize: 'medium',
-            autoPlay: true,
-            notifications: true
+        // Force theme to dark even if saved otherwise
+        const parsed = saved ? JSON.parse(saved) : {};
+        return {
+            theme: 'dark', // Enforce dark
+            fontSize: parsed.fontSize || 'small',
+            autoPlay: parsed.autoPlay ?? true,
+            notifications: parsed.notifications ?? true
         };
     });
 
     useEffect(() => {
         localStorage.setItem('lumina_settings', JSON.stringify(settings));
 
-        // Apply theme
+        // Enforce dark mode
         const root = window.document.documentElement;
-        if (settings.theme === 'dark') {
-            root.classList.add('dark');
-            root.style.colorScheme = 'dark';
-        } else if (settings.theme === 'light') {
-            root.classList.remove('dark');
-            root.style.colorScheme = 'light';
-        } else {
-            // Auto - check system preference
-            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (systemDark) {
-                root.classList.add('dark');
-                root.style.colorScheme = 'dark';
-            } else {
-                root.classList.remove('dark');
-                root.style.colorScheme = 'light';
-            }
-        }
+        root.classList.add('dark');
+        root.style.colorScheme = 'dark';
 
         // Apply Font Size
         const fontSizes = {
-            small: '14px',
-            medium: '16px',
+            small: '12px',
+            medium: '15px',
             large: '18px',
             'extra large': '20px'
         };

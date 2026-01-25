@@ -11,6 +11,7 @@ export function SearchPage() {
     const [results, setResults] = useState([])
     const [loading, setLoading] = useState(false)
     const [testament, setTestament] = useState('all')
+    const [selectedBook, setSelectedBook] = useState(null)
 
     const handleSearch = async () => {
         if (!query.trim()) return
@@ -46,9 +47,11 @@ export function SearchPage() {
         }, 800)
     }
 
-    const filteredBooks = testament === 'all'
-        ? bibleBooks
-        : bibleBooks.filter(b => b.testament === testament)
+    const filteredBooks = bibleBooks.filter(b => {
+        const matchesTestament = testament === 'all' || b.testament === testament
+        const matchesQuery = b.name.toLowerCase().includes(query.toLowerCase())
+        return matchesTestament && matchesQuery
+    })
 
     return (
         <div className="max-w-4xl mx-auto px-4 pb-24">
@@ -101,17 +104,45 @@ export function SearchPage() {
                         <BookOpen className="w-5 h-5 text-bible-gold" />
                         Quick Access
                     </h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                        {filteredBooks.slice(0, 20).map(book => (
-                            <button
-                                key={book.id}
-                                onClick={() => navigate(`/read?book=${book.id}`)}
-                                className="px-3 py-2 glass rounded-lg text-sm text-slate-300 hover:text-bible-gold hover:border-bible-gold/30 hover:bg-bible-gold/5 transition-all text-left truncate"
-                            >
-                                {book.name}
-                            </button>
-                        ))}
-                    </div>
+
+                    {/* Chapter Selection View */}
+                    {selectedBook ? (
+                        <div>
+                            <div className="flex items-center gap-4 mb-4">
+                                <button
+                                    onClick={() => setSelectedBook(null)}
+                                    className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                                >
+                                    <ChevronRight className="w-5 h-5 text-slate-400 rotate-180" />
+                                </button>
+                                <h3 className="text-xl font-bold text-white">{selectedBook.name}</h3>
+                            </div>
+                            <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+                                {Array.from({ length: selectedBook.chapters }, (_, i) => i + 1).map(chapter => (
+                                    <button
+                                        key={chapter}
+                                        onClick={() => navigate(`/read?book=${selectedBook.id}&chapter=${chapter}`)}
+                                        className="aspect-square glass rounded-lg flex items-center justify-center text-sm font-medium text-slate-300 hover:text-bible-gold hover:border-bible-gold/50 hover:bg-bible-gold/10 transition-all"
+                                    >
+                                        {chapter}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        /* Book List View */
+                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                            {filteredBooks.map(book => (
+                                <button
+                                    key={book.id}
+                                    onClick={() => setSelectedBook(book)}
+                                    className="px-3 py-2 glass rounded-lg text-sm text-slate-300 hover:text-bible-gold hover:border-bible-gold/30 hover:bg-bible-gold/5 transition-all text-left truncate"
+                                >
+                                    {book.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 

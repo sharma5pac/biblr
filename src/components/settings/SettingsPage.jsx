@@ -13,13 +13,7 @@ export function SettingsPage() {
             title: 'Appearance',
             icon: Moon,
             items: [
-                {
-                    label: 'Theme',
-                    value: settings.theme,
-                    options: ['Light', 'Dark', 'Auto'],
-                    onChange: (val) => updateSetting('theme', val.toLowerCase()),
-                    icon: settings.theme === 'dark' ? Moon : Sun
-                },
+                // Theme option removed - Enforced Dark Mode
                 {
                     label: 'Font Size',
                     value: settings.fontSize,
@@ -41,18 +35,7 @@ export function SettingsPage() {
                 }
             ]
         },
-        {
-            title: 'Notifications',
-            icon: Bell,
-            items: [
-                {
-                    label: 'Daily Devotional Reminder',
-                    value: settings.notifications,
-                    type: 'toggle',
-                    onChange: (v) => updateSetting('notifications', v)
-                }
-            ]
-        }
+
     ]
 
     return (
@@ -81,10 +64,10 @@ export function SettingsPage() {
                         )}
                     </div>
                     <div className="flex-1">
-                        <h3 className="font-bold text-white text-lg">
+                        <h3 className="font-bold text-slate-800 dark:text-white text-lg">
                             {user ? user.name : 'Guest'}
                         </h3>
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
                             {user ? user.email : 'Sign in to sync your data'}
                         </p>
                     </div>
@@ -103,7 +86,7 @@ export function SettingsPage() {
                 >
                     <div className="flex items-center gap-2 mb-3 px-2">
                         <section.icon className="w-5 h-5 text-bible-gold" />
-                        <h2 className="font-semibold text-white">{section.title}</h2>
+                        <h2 className="font-semibold text-slate-800 dark:text-white">{section.title}</h2>
                     </div>
 
                     <div className="glass rounded-2xl overflow-hidden">
@@ -115,13 +98,13 @@ export function SettingsPage() {
                             >
                                 <div className="flex items-center gap-3">
                                     {item.icon && <item.icon className="w-5 h-5 text-slate-400" />}
-                                    <span className="text-slate-200">{item.label}</span>
+                                    <span className="text-slate-700 dark:text-slate-200">{item.label}</span>
                                 </div>
 
                                 {item.type === 'toggle' ? (
                                     <button
                                         onClick={() => item.onChange(!item.value)}
-                                        className={`w-12 h-6 rounded-full transition-colors ${item.value ? 'bg-bible-gold' : 'bg-slate-700'
+                                        className={`w-12 h-6 rounded-full transition-colors ${item.value ? 'bg-bible-gold' : 'bg-slate-300 dark:bg-slate-700'
                                             }`}
                                     >
                                         <div className={`w-5 h-5 rounded-full bg-white shadow-lg transition-transform ${item.value ? 'translate-x-6' : 'translate-x-0.5'
@@ -131,7 +114,7 @@ export function SettingsPage() {
                                     <select
                                         value={item.value}
                                         onChange={(e) => item.onChange(e.target.value)}
-                                        className="bg-bible-bg text-bible-text px-3 py-1 rounded-lg border border-bible-glass-border focus:border-bible-gold outline-none transition-colors"
+                                        className="bg-white dark:bg-bible-bg text-slate-800 dark:text-bible-text px-3 py-1 rounded-lg border border-slate-200 dark:border-bible-glass-border focus:border-bible-gold outline-none transition-colors"
                                     >
                                         {item.options.map(opt => (
                                             <option key={opt} value={opt.toLowerCase()}>{opt}</option>
@@ -154,7 +137,7 @@ export function SettingsPage() {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Database className="w-5 h-5 text-slate-400" />
-                        <span className="text-slate-200">Clear Cache</span>
+                        <span className="text-slate-700 dark:text-slate-200">Clear Cache</span>
                     </div>
                     <Button variant="ghost" size="sm" onClick={clearSettingsCache}>Clear</Button>
                 </div>

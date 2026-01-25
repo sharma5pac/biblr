@@ -72,6 +72,65 @@ body {
   border: 1px solid rgba(251, 191, 36, 0.2);
 }
 
+/* Deep Liquid Glass */
+.glass-liquid {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  /* Icy top edge */
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  /* Inner glow */
+}
+
+/* Island Panel (Unified Black Floating Aesthetic) */
+.island-panel {
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Distinct ring */
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.9),
+    /* Deep floating shadow */
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+  /* Outer edge definition */
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Dynamic Island */
+.dynamic-island {
+  background: #000000;
+  border-radius: 9999px;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.15);
+  /* Subtle ring to pop against dark bg */
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.shine-overlay {
+  background: linear-gradient(45deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.05) 45%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(255, 255, 255, 0.05) 55%,
+      transparent 100%);
+  background-size: 200% 200%;
+  animation: shine 6s infinite;
+}
+
+@keyframes shine {
+  0% {
+    background-position: 200% 200%;
+  }
+
+  100% {
+    background-position: -200% -200%;
+  }
+}
+
 /* Glowing effects */
 .glow-gold {
   box-shadow: 0 0 20px rgba(251, 191, 36, 0.3), 0 0 40px rgba(251, 191, 36, 0.1);

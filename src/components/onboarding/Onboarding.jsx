@@ -47,7 +47,7 @@ export function Onboarding({ onComplete }) {
     }
 
     return (
-        <div className="fixed inset-0 z-50 bg-[#0a0f1a] flex flex-col items-center justify-center p-6 text-center">
+        <div className="fixed inset-0 z-[100] bg-[#0a0f1a] flex flex-col items-center justify-center p-6 text-center">
             <div className="w-full max-w-md flex flex-col h-full max-h-[800px] relative">
                 {/* Skip Button */}
                 <button

@@ -52,7 +52,7 @@ export function CommunityPage() {
                         <Users className="w-12 h-12 text-bible-gold" />
                     </div>
                     <div className="space-y-3">
-                        <h1 className="text-4xl font-serif font-bold text-white">Lumina Social</h1>
+                        <h1 className="text-4xl font-serif font-bold text-slate-900 dark:text-white">Lumina Social</h1>
                         <p className="text-slate-400 text-lg">Connect, pray, and grow with your church community in real-time.</p>
                     </div>
                     <Button
@@ -102,7 +102,7 @@ export function CommunityPage() {
                         <input
                             type="text"
                             placeholder="Find groups..."
-                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-bible-gold/50 transition-colors"
+                            className="w-full bg-white/50 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-bible-gold/50 transition-colors"
                         />
                     </div>
                 </div>
@@ -127,7 +127,7 @@ export function CommunityPage() {
                                     {group.isSpecial ? <Heart className="w-6 h-6" /> : <Users className="w-6 h-6" />}
                                 </div>
                                 <div className="flex-1 text-left min-w-0">
-                                    <h3 className={`font-semibold truncate ${activeGroupId === group.id ? 'text-bible-gold' : 'text-slate-200'}`}>
+                                    <h3 className={`font-semibold truncate ${activeGroupId === group.id ? 'text-bible-gold' : 'text-slate-800 dark:text-slate-200'}`}>
                                         {group.name}
                                     </h3>
                                     <p className="text-xs text-slate-500 truncate mt-0.5">
@@ -147,7 +147,7 @@ export function CommunityPage() {
                             <img src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.name || 'User'}`} alt={user?.name} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-white truncate">{user?.name || user?.email}</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.name || user?.email}</p>
                             <p className="text-[10px] text-emerald-400 font-medium">Online</p>
                         </div>
                     </div>
@@ -168,7 +168,7 @@ export function CommunityPage() {
                             <MessageCircle className="w-10 h-10 text-slate-700" />
                         </div>
                         <div className="max-w-md">
-                            <h2 className="text-xl font-serif font-bold text-white mb-2">Community Chat</h2>
+                            <h2 className="text-xl font-serif font-bold text-slate-900 dark:text-white mb-2">Community Chat</h2>
                             <p className="text-slate-400 text-sm">Select a group from the sidebar to start communicating.</p>
                         </div>
                     </div>

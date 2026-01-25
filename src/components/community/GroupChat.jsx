@@ -66,7 +66,7 @@ export const GroupChat = ({ group, onBack }) => {
                         {group.name.charAt(0)}
                     </div>
                     <div>
-                        <h3 className="font-bold text-white leading-tight">{group.name}</h3>
+                        <h3 className="font-bold text-slate-900 dark:text-white leading-tight">{group.name}</h3>
                         <p className="text-xs text-slate-400">Community Chat</p>
                     </div>
                 </div>
@@ -90,8 +90,8 @@ export const GroupChat = ({ group, onBack }) => {
                         return (
                             <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[80%] px-4 py-2 rounded-2xl ${isMe
-                                        ? 'bg-bible-gold text-slate-900 rounded-tr-none'
-                                        : 'bg-white/5 text-white border border-white/10 rounded-tl-none'
+                                    ? 'bg-bible-gold text-slate-900 rounded-tr-none'
+                                    : 'bg-white dark:bg-white/5 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 rounded-tl-none'
                                     }`}>
                                     {!isMe && <p className="text-[10px] font-bold text-bible-gold/80 mb-1">{msg.user}</p>}
                                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
@@ -107,13 +107,13 @@ export const GroupChat = ({ group, onBack }) => {
 
             {/* Input */}
             <div className="p-4 glass border-t border-white/5">
-                <div className="flex items-center gap-2 bg-white/5 rounded-2xl p-2 border border-white/10">
+                <div className="flex items-center gap-2 bg-white/50 dark:bg-white/5 rounded-2xl p-2 border border-black/10 dark:border-white/10">
                     <textarea
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Write a message..."
-                        className="flex-1 bg-transparent border-none focus:ring-0 text-white text-sm py-2 px-2 resize-none max-h-32"
+                        className="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white text-sm py-2 px-2 resize-none max-h-32"
                         rows={1}
                     />
                     <Button

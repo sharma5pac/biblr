@@ -4,6 +4,7 @@ import { Play, Pause, Square, ChevronDown, Loader2, X, Settings2, Volume2, Music
 import { Button } from '../ui/Button'
 import { bibleBooks } from '../../data/bibleData'
 import { getChapter } from '../../services/bibleService'
+import { audioService } from '../../services/audioService'
 
 export function AudioBiblePage() {
     const [selectedBook, setSelectedBook] = useState('psa') // Psalms
@@ -21,8 +22,7 @@ export function AudioBiblePage() {
         { name: 'Silent Hymn I', src: '/silent-hymn-1.mp3' },
         { name: 'Silent Hymn II', src: '/silent-hymn-2.mp3' },
         { name: 'Morning Dew', src: '/serenity-1.mp3' },
-        { name: 'Holy Spirit', src: '/serenity-2.mp3' },
-        { name: 'Abyss of Peace', src: '/devotional.mp3' }
+        { name: 'Holy Spirit', src: '/serenity-2.mp3' }
     ]
 
     // Speech state
@@ -31,10 +31,10 @@ export function AudioBiblePage() {
     const [currentVerseIndex, setCurrentVerseIndex] = useState(0)
     const [selectedVoice, setSelectedVoice] = useState(null)
     const [voices, setVoices] = useState([])
-    const [rate, setRate] = useState(0.85)
+    const [rate, setRate] = useState(0.9)
 
-    const synthRef = useRef(window.speechSynthesis)
-    const utteranceRef = useRef(null)
+    // Global playback safe-guard
+    const playbackRef = useRef(false) // Tracks if we *intend* to be playing
 
     const book = bibleBooks.find(b => b.id === selectedBook)
 
@@ -49,27 +49,28 @@ export function AudioBiblePage() {
         }
     }, [isSpeaking, isPaused, isMusicEnabled, bgMusicVolume, currentTrack])
 
-    // Load available voices & Set Ava Multilingual as default
+    // Load voices from Service
     useEffect(() => {
-        const loadVoices = () => {
-            const availableVoices = synthRef.current.getVoices()
-            setVoices(availableVoices)
-
-            // Try to find "Ava Multilingual" or similar high-quality voices
-            const ava = availableVoices.find(v => v.name.toLowerCase().includes('ava') && v.name.toLowerCase().includes('multilingual'))
-            const fallback = availableVoices.find(v => v.name.includes('Google US English') || v.name.includes('Natural')) || availableVoices[0]
-
-            if (ava) {
-                setSelectedVoice(ava)
-            } else if (!selectedVoice && fallback) {
-                setSelectedVoice(fallback)
+        const updateVoices = (loadedVoices) => {
+            setVoices(loadedVoices)
+            // Auto-select the best voice if none selected
+            if (!selectedVoice) {
+                const best = audioService.findBestVoice()
+                setSelectedVoice(best)
             }
         }
-        loadVoices()
-        if (window.speechSynthesis) {
-            window.speechSynthesis.onvoiceschanged = loadVoices
+
+        // Subscribe to voice changes
+        const unsubscribe = audioService.subscribe(updateVoices)
+        return () => unsubscribe()
+    }, [selectedVoice])
+
+    // Sync selected voice to service
+    useEffect(() => {
+        if (selectedVoice) {
+            audioService.setVoice(selectedVoice.name)
         }
-    }, [])
+    }, [selectedVoice])
 
     // Fetch chapter content
     useEffect(() => {
@@ -89,49 +90,60 @@ export function AudioBiblePage() {
         fetchChapter()
     }, [selectedBook, selectedChapter, book])
 
-    const speakVerse = (verseIndex) => {
-        if (verseIndex >= verses.length) {
+    const speakVerse = async (verseIndex) => {
+        if (verseIndex >= verses.length || !playbackRef.current) {
             setIsSpeaking(false)
             setCurrentVerseIndex(0)
+            playbackRef.current = false
             return
         }
 
         const verse = verses[verseIndex]
         const cleanText = verse.text.replace(/<[^>]*>/g, '')
-        const utterance = new SpeechSynthesisUtterance(cleanText)
 
-        utterance.voice = selectedVoice
-        utterance.rate = rate
-        utterance.pitch = 1
+        // Move highlighted index
+        setCurrentVerseIndex(verseIndex)
 
-        utterance.onend = () => {
-            setCurrentVerseIndex(prev => prev + 1)
-            speakVerse(verseIndex + 1)
+        try {
+            // Speak and await completion
+            await audioService.speak(cleanText, {
+                rate: rate,
+                pitch: 0.92, // Slightly lower pitch for more authority/calmness
+                voice: selectedVoice
+            })
+
+            // Recursion: Only continue if we are STILL playing and weren't stopped
+            if (playbackRef.current && !isPaused) {
+                speakVerse(verseIndex + 1)
+            }
+        } catch (e) {
+            console.error("Playback error", e)
+            setIsSpeaking(false)
         }
-
-        utteranceRef.current = utterance
-        synthRef.current.cancel()
-        synthRef.current.speak(utterance)
     }
 
     const handlePlay = () => {
         if (isPaused) {
-            synthRef.current.resume()
+            audioService.resume()
             setIsPaused(false)
+            playbackRef.current = true // Ensure we are logically playing
         } else {
             setIsSpeaking(true)
             setIsPaused(false)
+            playbackRef.current = true
             speakVerse(currentVerseIndex)
         }
     }
 
     const handlePause = () => {
-        synthRef.current.pause()
+        audioService.pause()
         setIsPaused(true)
+        // playbackRef remains true because we intend to continue
     }
 
     const handleStop = () => {
-        synthRef.current.cancel()
+        playbackRef.current = false // Kill the loop
+        audioService.cancel()
         setIsSpeaking(false)
         setIsPaused(false)
         setCurrentVerseIndex(0)
@@ -149,7 +161,7 @@ export function AudioBiblePage() {
                 >
                     Meditative Audio Experience
                 </motion.div>
-                <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-4">The Audio Word</h1>
+                <h1 className="text-2xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white mb-4">The Audio Word</h1>
                 <p className="text-slate-400 max-w-lg mx-auto italic">"Faith comes by hearing, and hearing by the word of God."</p>
             </div>
 
@@ -165,7 +177,7 @@ export function AudioBiblePage() {
                             <div className="w-48 h-48 md:w-64 md:h-64 rounded-[2.5rem] bg-gradient-to-br from-bible-gold to-yellow-700 p-1 mb-8 shadow-2xl transform hover:scale-105 transition-transform duration-500 group">
                                 <div className="w-full h-full rounded-[2.3rem] bg-slate-900 flex flex-col items-center justify-center overflow-hidden relative">
                                     <BookOpen className="w-20 h-20 text-bible-gold/20 absolute" />
-                                    <div className="text-4xl md:text-6xl font-serif font-bold text-bible-gold z-10">{selectedChapter}</div>
+                                    <div className="text-3xl md:text-6xl font-serif font-bold text-bible-gold z-10">{selectedChapter}</div>
                                     <div className="text-xs uppercase tracking-[0.3em] text-bible-gold/60 mt-2 z-10 font-bold">{book?.name}</div>
 
                                     {/* Wave Animation when playing */}
@@ -185,7 +197,7 @@ export function AudioBiblePage() {
                             </div>
 
                             <div className="space-y-1 mb-10">
-                                <h2 className="text-2xl md:text-3xl font-serif font-bold text-white">{book?.name} Chapter {selectedChapter}</h2>
+                                <h2 className="text-xl md:text-3xl font-serif font-bold text-slate-900 dark:text-white">{book?.name} Chapter {selectedChapter}</h2>
                                 <p className="text-bible-gold/60 font-medium">Verse {currentVerseIndex + 1} of {verses.length}</p>
                             </div>
 
@@ -212,7 +224,7 @@ export function AudioBiblePage() {
                     {/* Progress & Text View */}
                     <div className="glass rounded-3xl p-6 md:p-8 min-h-[200px] border border-white/5 bg-slate-900/40">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-bold text-white flex items-center gap-2">
+                            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                 <Sparkles className="w-4 h-4 text-bible-gold" />
                                 Live Scripture
                             </h3>
@@ -228,7 +240,7 @@ export function AudioBiblePage() {
                                     <div className="h-4 bg-white/5 rounded w-3/4" />
                                 </div>
                             ) : (
-                                <p className="text-lg md:text-xl font-serif leading-relaxed text-slate-300">
+                                <p className="text-lg md:text-xl font-serif leading-relaxed text-slate-700 dark:text-slate-300">
                                     <span className="text-bible-gold font-bold mr-2">{verses[currentVerseIndex]?.verse}</span>
                                     {verses[currentVerseIndex]?.text.replace(/<[^>]*>/g, '')}
                                 </p>
@@ -241,14 +253,14 @@ export function AudioBiblePage() {
                 <div className="space-y-6">
                     {/* Book/Chapter Selection */}
                     <div className="glass rounded-3xl p-6 border border-white/10 space-y-4">
-                        <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                             <BookOpen className="w-4 h-4 text-bible-gold" /> Content
                         </h4>
                         <div className="space-y-3">
                             <select
                                 value={selectedBook}
                                 onChange={(e) => { setSelectedBook(e.target.value); setSelectedChapter(1) }}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-bible-gold outline-none text-sm appearance-none"
+                                className="w-full bg-white/50 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl p-3 text-slate-900 dark:text-white focus:border-bible-gold outline-none text-sm appearance-none"
                                 style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23EAB308\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
                             >
                                 {bibleBooks.map(b => (
@@ -258,7 +270,7 @@ export function AudioBiblePage() {
 
                             <button
                                 onClick={() => setShowChapterModal(true)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white hover:border-bible-gold transition-colors text-sm flex justify-between items-center"
+                                className="w-full bg-white/50 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl p-3 text-slate-900 dark:text-white hover:border-bible-gold transition-colors text-sm flex justify-between items-center"
                             >
                                 <span>Chapter {selectedChapter}</span>
                                 <ChevronDown className="w-4 h-4 text-bible-gold" />
@@ -268,20 +280,29 @@ export function AudioBiblePage() {
 
                     {/* Audio Customization */}
                     <div className="glass rounded-3xl p-6 border border-white/10 space-y-6">
-                        <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                             <Settings2 className="w-4 h-4 text-bible-gold" /> Customization
                         </h4>
 
                         {/* Voice Selection */}
                         <div className="space-y-2">
-                            <label className="text-xs text-slate-500 font-bold uppercase tracking-tighter">Narrator Voice</label>
+                            <div className="flex justify-between items-center">
+                                <label className="text-xs text-slate-500 font-bold uppercase tracking-tighter">Narrator Voice</label>
+                                <button
+                                    onClick={() => audioService.initVoices()}
+                                    className="text-[10px] text-bible-gold hover:text-white underline decoration-dotted"
+                                >
+                                    Force Refresh
+                                </button>
+                            </div>
                             <select
                                 value={selectedVoice?.name || ''}
                                 onChange={(e) => setSelectedVoice(voices.find(v => v.name === e.target.value))}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-bible-gold outline-none text-xs"
+                                className="w-full bg-slate-100 dark:bg-slate-800 border border-black/10 dark:border-white/10 rounded-xl p-3 text-slate-900 dark:text-white focus:border-bible-gold outline-none text-xs"
                             >
+                                {voices.length === 0 && <option value="">Loading Voices...</option>}
                                 {voices.map(v => (
-                                    <option key={v.name} value={v.name} className="bg-slate-900">{v.name.replace('Microsoft ', '').replace('Google ', '')}</option>
+                                    <option key={v.name} value={v.name} className="bg-slate-900 text-white">{v.name.replace('Microsoft ', '').replace('Google ', '')}</option>
                                 ))}
                             </select>
                         </div>

@@ -2,18 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bookmark, Heart, Sparkles, Search, Filter, Trash2, Share2, BookOpen } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { openDB } from 'idb'
-
-const DB_NAME = 'lumina-bookmarks-db'
-const STORE_NAME = 'bookmarks'
-
-const dbPromise = openDB(DB_NAME, 1, {
-    upgrade(db) {
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true })
-        }
-    }
-})
+import { BookmarkService } from '../../services/bookmarkService'
 
 export function BookmarksPage() {
     const [bookmarks, setBookmarks] = useState([])
@@ -25,14 +14,12 @@ export function BookmarksPage() {
     }, [])
 
     const loadBookmarks = async () => {
-        const db = await dbPromise
-        const all = await db.getAll(STORE_NAME)
+        const all = await BookmarkService.getAll()
         setBookmarks(all.sort((a, b) => b.timestamp - a.timestamp))
     }
 
     const deleteBookmark = async (id) => {
-        const db = await dbPromise
-        await db.delete(STORE_NAME, id)
+        await BookmarkService.delete(id)
         loadBookmarks()
     }
 
@@ -73,8 +60,8 @@ export function BookmarksPage() {
                             key={cat}
                             onClick={() => setFilterCategory(cat)}
                             className={`px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${filterCategory === cat
-                                    ? 'bg-bible-gold text-slate-900'
-                                    : 'bg-slate-800/50 text-slate-400 hover:text-white'
+                                ? 'bg-bible-gold text-slate-900'
+                                : 'bg-slate-800/50 text-slate-400 hover:text-white'
                                 }`}
                         >
                             {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -115,7 +102,7 @@ export function BookmarksPage() {
                             >
                                 <div className="flex items-start gap-4">
                                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${bookmark.type === 'insight' ? 'bg-gradient-to-br from-bible-gold to-yellow-600' :
-                                            bookmark.type === 'note' ? 'bg-blue-500' : 'bg-purple-500'
+                                        bookmark.type === 'note' ? 'bg-blue-500' : 'bg-purple-500'
                                         }`}>
                                         {bookmark.type === 'insight' ? <Sparkles className="w-5 h-5 text-slate-900" /> :
                                             bookmark.type === 'note' ? <BookOpen className="w-5 h-5 text-white" /> :
@@ -165,11 +152,4 @@ export function BookmarksPage() {
     )
 }
 
-// Export helper function to add bookmarks from other components
-export async function addBookmark(bookmark) {
-    const db = await dbPromise
-    await db.add(STORE_NAME, {
-        ...bookmark,
-        timestamp: Date.now()
-    })
-}
+

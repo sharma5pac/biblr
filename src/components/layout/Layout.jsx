@@ -8,6 +8,7 @@ import { Button } from '../ui/Button'
 import { OfflineIndicator } from '../ui/OfflineIndicator'
 import { RatingPrompt } from '../ui/RatingPrompt'
 
+
 export function Layout({ children }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [authModalOpen, setAuthModalOpen] = useState(false)
@@ -46,6 +47,7 @@ export function Layout({ children }) {
         <div className="min-h-screen text-slate-100 flex flex-col">
             <OfflineIndicator />
             <RatingPrompt />
+
             {/* Floating Header with Glassmorphism */}
             <header className="sticky top-0 z-50 glass-dark">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -112,8 +114,8 @@ export function Layout({ children }) {
                                 Install
                             </Button>
                         )}
-                        {/* User Menu / Login Button */}
-                        {user ? (
+                        {/* User Menu */}
+                        {user && (
                             <div className="hidden md:flex items-center gap-3 pl-4 border-l border-bible-glass-border">
                                 <div className="text-right">
                                     <div className="text-sm font-medium text-bible-text">{user.name}</div>
@@ -135,15 +137,6 @@ export function Layout({ children }) {
                                     )}
                                 </div>
                             </div>
-                        ) : (
-                            <Button
-                                size="sm"
-                                className="hidden md:flex hover:scale-105"
-                                onClick={() => setAuthModalOpen(true)}
-                            >
-                                <LogIn className="w-4 h-4 mr-2" />
-                                Sign In
-                            </Button>
                         )}
 
                         {/* Mobile Menu Toggle */}
@@ -160,13 +153,14 @@ export function Layout({ children }) {
                 <AnimatePresence>
                     {mobileMenuOpen && (
                         <motion.nav
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="md:hidden glass-dark border-t border-white/5"
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute top-full left-0 right-0 mx-4 mt-2 w-auto md:hidden bg-slate-950/95 backdrop-blur-3xl border border-white/10 rounded-[2rem] z-50 shadow-2xl overflow-hidden"
                         >
                             <div className="p-4 border-b border-white/5 mb-2">
-                                {user ? (
+                                {user && (
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center text-sm font-bold border border-white/10">
                                             {user.avatar ? (
@@ -189,14 +183,10 @@ export function Layout({ children }) {
                                         </div>
                                         <Button size="sm" variant="ghost" onClick={logout}>Sign Out</Button>
                                     </div>
-                                ) : (
-                                    <Button className="w-full glass-gold" onClick={() => { setAuthModalOpen(true); setMobileMenuOpen(false) }}>
-                                        <LogIn className="w-4 h-4 mr-2" />
-                                        Sign In or Join
-                                    </Button>
                                 )}
                             </div>
 
+                            {/* Primary Mobile Nav */}
                             {navItems.map(item => (
                                 <NavLink
                                     key={item.to}
@@ -205,6 +195,27 @@ export function Layout({ children }) {
                                     className={({ isActive }) =>
                                         `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${isActive
                                             ? 'bg-bible-gold/10 text-bible-gold border-l-2 border-bible-gold'
+                                            : 'text-slate-400 hover:bg-white/5'
+                                        }`
+                                    }
+                                >
+                                    <item.icon className="w-5 h-5" />
+                                    {item.label}
+                                </NavLink>
+                            ))}
+
+                            {/* Divider */}
+                            <div className="h-px bg-white/5 my-2 mx-4" />
+
+                            {/* Secondary Mobile Nav (Restored Features) */}
+                            {secondaryNavItems.map(item => (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className={({ isActive }) =>
+                                        `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${isActive
+                                            ? 'text-bible-gold'
                                             : 'text-slate-400 hover:bg-white/5'
                                         }`
                                     }
@@ -245,22 +256,22 @@ export function Layout({ children }) {
             {/* Auth Modal */}
             <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
-            {/* Mobile Bottom Nav - Glassmorphism */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-dark border-t border-white/10 z-50">
-                <div className="flex items-center justify-around py-2 px-2">
+            {/* Mobile Bottom Nav - Floating Island */}
+            <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-auto z-50">
+                <div className="island-panel rounded-full px-6 py-2 flex items-center gap-6 shadow-2xl">
                     {navItems.map(item => (
                         <NavLink
                             key={item.to}
                             to={item.to}
                             className={({ isActive }) =>
-                                `flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 ${isActive
-                                    ? 'text-bible-gold glass-gold'
+                                `flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${isActive
+                                    ? 'text-bible-gold scale-110 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]'
                                     : 'text-slate-500 hover:text-slate-300'
                                 }`
                             }
                         >
                             <item.icon className="w-5 h-5" />
-                            <span className="text-xs">{item.label}</span>
+                            {/* <span className="text-[10px] uppercase font-bold tracking-wider">{item.label}</span> */}
                         </NavLink>
                     ))}
                 </div>

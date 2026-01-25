@@ -1,7 +1,7 @@
-// Basic AI Service using Google Gemini (or Simulation Fallback)
+// AI Service using xAI Grok (with Simulation Fallback)
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
-const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
+const API_KEY = import.meta.env.VITE_GROK_API_KEY || ''
+const API_URL = 'https://api.x.ai/v1/chat/completions'
 
 // Simulation Data for Fallback
 const BOT_PERSONAS = {
@@ -31,7 +31,7 @@ const BOT_PERSONAS = {
 export const AIService = {
     async generateResponse(userMessage, context = '', persona = null) {
         if (API_KEY) {
-            return await this.callGemini(userMessage, context, persona)
+            return await this.callGrok(userMessage, context, persona)
         } else {
             return await this.simulateResponse(userMessage, persona)
         }
@@ -60,34 +60,34 @@ export const AIService = {
         }
     },
 
-    async callGemini(message, context, personaName = null) {
+    async callGrok(message, context, personaName = null) {
         try {
             const persona = personaName ? BOT_PERSONAS[personaName] : null
-            const personaPrompt = persona
-                ? `Act as ${personaName}, a wise and kind ${persona.role}. Use biblical insight and encouragement.`
-                : `Act as a wise, kind community member and biblical scholar.`
+            const systemPrompt = persona
+                ? `You are ${personaName}, a wise and kind ${persona.role}. Use biblical insight and encouragement. Your tone is warm, lively, and engaging.`
+                : `You are Lumina, a witty, wise, and lively biblical scholar and friend. You love God's word and explaining it with energy.`
 
-            const prompt = `
-            ${personaPrompt}
-            Context: ${context}
-            User said: "${message}"
-            
-            Respond briefly (under 60 words) with deep biblical insight.
-            Act in character if a persona was specified.
-            `
-
-            const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+            const response = await fetch(API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
+                    model: "grok-beta",
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: `Context: ${context}\n\nUser: ${message}\n\nRespond with lively spiritual wisdom (max 100 words).` }
+                    ],
+                    stream: false,
+                    temperature: 0.7
                 })
             })
 
             const data = await response.json()
             if (data.error) throw new Error(data.error.message)
 
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "May God guide your path."
+            const text = data.choices?.[0]?.message?.content || "May God guide your path."
 
             return {
                 text: text,
@@ -102,41 +102,51 @@ export const AIService = {
     },
 
     async getVerseInsight(verseRef, verseText) {
-        // Check if we have Gemini API
+        // Check if we have Grok API
         if (API_KEY) {
             try {
-                const prompt = `Provide a deep spiritual insight for ${verseRef}: "${verseText}". 
+                const prompt = `Provide a lively, deep, and engaging spiritual insight for ${verseRef}: "${verseText}".
+                
+Make it feel like a dynamic conversation with a brilliant theologian who loves modern life.
                 
 Include these sections:
-### 📜 Historical Context
-Brief background on the book and passage setting.
+### 📜 The Backstory
+A punchy, interesting historical context.
 
-### 💡 Key Insights
-3-4 bullet points with theological and practical insights.
+### 💡 The Spark
+3-4 bright, powerful bullet points with deep theological meat but served fresh.
 
-### 🌿 Life Application
-Personal, actionable wisdom for modern believers.
+### 🌿 Live It Now
+A challenge for today. Real, raw, and actionable.
 
-Keep it encouraging, theologically sound, and formatted in markdown.`
+Keep it energizing, strict on theology, wild on application. Format in markdown.`
 
-                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+                const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
+                        model: "grok-beta",
+                        messages: [
+                            { role: "system", content: "You are Lumina, an energetic, witty, and deep biblical guide." },
+                            { role: "user", content: prompt }
+                        ],
+                        temperature: 0.7
                     })
                 })
                 const data = await response.json()
 
                 if (data.error) {
-                    console.error("Gemini API Error:", data.error)
+                    console.error("Grok API Error:", data.error)
                     throw new Error(data.error.message)
                 }
 
-                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text
+                const aiText = data.choices?.[0]?.message?.content
                 if (aiText) return aiText
             } catch (e) {
-                console.warn("Gemini API failed or returned error", e)
+                console.warn("Grok API failed or returned error", e)
             }
         }
 
@@ -259,7 +269,7 @@ ${data.application()}`
                 5. Suggest a 'Meditative Tone' (e.g., 'Rain in a Monastery', 'Cathedral Bells', 'Holy Chanting').
                 6. Identify the standard 3-letter Book ID (e.g., 'GEN', 'PSA', 'JHN', 'ROM', 'MAT').
                 
-                Format as JSON: 
+                Format EXACTLY as this JSON: 
                 { 
                   "bookId": "psa", 
                   "chapter": 46, 
@@ -271,17 +281,32 @@ ${data.application()}`
                   "tone": "Rain in a Monastery" 
                 }`
 
-                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+                const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
+                        model: "grok-beta",
+                        messages: [
+                            { role: "system", content: "You are a comforting spiritual guide." },
+                            { role: "user", content: prompt }
+                        ],
+                        response_format: { type: "json_object" },
+                        temperature: 0.7
                     })
                 })
                 const data = await response.json()
-                const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || ""
-                const jsonMatch = rawText.match(/\{.*\}/s)
-                if (jsonMatch) return JSON.parse(jsonMatch[0])
+                const rawText = data.choices?.[0]?.message?.content || ""
+
+                try {
+                    return JSON.parse(rawText)
+                } catch (e) {
+                    // Fallback regex if JSON parse fails
+                    const jsonMatch = rawText.match(/\{.*\}/s)
+                    if (jsonMatch) return JSON.parse(jsonMatch[0])
+                }
             } catch (e) {
                 console.error("Hope Briefing AI error", e)
             }
@@ -303,7 +328,7 @@ ${data.application()}`
     async interviewBook(book, chapter, question) {
         if (API_KEY) {
             try {
-                const prompt = `You are a wise biblical scholar speaking as the Book of ${book}, Chapter ${chapter}. 
+                const prompt = `You are the Book of ${book}, Chapter ${chapter} personified.
                 The user asks: "${question}" 
                 
                 Guidelines:
@@ -311,20 +336,28 @@ ${data.application()}`
                 2. If it's John, speak of Light and Love. If it's Romans, speak of Law and Grace.
                 3. Provide a transformative, deep answer (under 120 words).
                 4. Always include a reinforcing verse from this book.
-                5. Do not give generic answers. Use your full power as Gemini.`
+                5. Be lively, ancient yet timeless. Don't be a robot.`
 
-                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+                const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
+                        model: "grok-beta",
+                        messages: [
+                            { role: "system", content: `You are the spirit of the book of ${book}.` },
+                            { role: "user", content: prompt }
+                        ],
+                        temperature: 0.7
                     })
                 })
                 const data = await response.json()
 
                 if (data.error) throw new Error(data.error.message)
 
-                const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+                const text = data.choices?.[0]?.message?.content
                 if (text) return text
             } catch (e) {
                 console.error("Interview error", e)

@@ -19,6 +19,25 @@ const dbPromise = openDB(DB_NAME, 1, {
  * @param {number} chapter - Chapter number
  * @param {string} translation - Translation ID (e.g., 'kjv', 'web')
  */
+const BOOK_MAPPING = {
+    'genesis': 'gn', 'exodus': 'ex', 'leviticus': 'lv', 'numbers': 'nm', 'deuteronomy': 'dt',
+    'joshua': 'js', 'judges': 'jg', 'ruth': 'rt', '1samuel': '1sa', '2samuel': '2sa',
+    '1kings': '1ki', '2kings': '2ki', '1chronicles': '1ch', '2chronicles': '2ch',
+    'ezra': 'ez', 'nehemiah': 'ne', 'esther': 'es', 'job': 'jb', 'psalms': 'ps', 'psalm': 'ps',
+    'proverbs': 'pr', 'ecclesiastes': 'ec', 'songofsolomon': 'so', 'isaiah': 'is',
+    'jeremiah': 'je', 'lamentations': 'la', 'ezekiel': 'ek', 'daniel': 'da',
+    'hosea': 'ho', 'joel': 'jl', 'amos': 'am', 'obadiah': 'ob', 'jonah': 'jon',
+    'micah': 'mi', 'nahum': 'na', 'habakkuk': 'ha', 'zephaniah': 'ze',
+    'haggai': 'hag', 'zechariah': 'za', 'malachi': 'ma',
+    'matthew': 'mt', 'mark': 'mr', 'luke': 'lu', 'john': 'jh', 'acts': 'ac',
+    'romans': 'ro', '1corinthians': '1co', '2corinthians': '2co', 'galatians': 'ga',
+    'ephesians': 'eph', 'philippians': 'ph', 'colossians': 'col',
+    '1thessalonians': '1th', '2thessalonians': '2th', '1timothy': '1ti',
+    '2timothy': '2ti', 'titus': 'tit', 'philemon': 'phm', 'hebrews': 'he',
+    'james': 'ja', '1peter': '1pe', '2peter': '2pe', '1john': '1jo',
+    '2john': '2jo', '3john': '3jo', 'jude': 'ju', 'revelation': 're'
+}
+
 export async function getChapter(book, chapter, translation = 'web') {
     const key = `${book}-${chapter}-${translation}`.toLowerCase()
 
@@ -27,8 +46,6 @@ export async function getChapter(book, chapter, translation = 'web') {
         const db = await dbPromise
         const cachedData = await db.get(STORE_NAME, key)
 
-        // If we have valid cached data, return it
-        // In a real app, you might check for "staleness" here
         if (cachedData) {
             console.log('Serving from Offline Cache:', key)
             return { ...cachedData, sourcedFrom: 'cache' }
@@ -37,16 +54,14 @@ export async function getChapter(book, chapter, translation = 'web') {
         console.error('Error reading from cache:', err)
     }
 
-    // Fetch from Network
+    // Try Network first, but fail gracefully to offline
     try {
-        // Sanitize book name for API (e.g., "1 John" -> "1+John")
         const formattedBook = book.replace(/\s+/g, '')
         const response = await fetch(`${API_BASE}/${formattedBook}+${chapter}?translation=${translation}`)
         if (!response.ok) throw new Error('Network response was not ok')
 
         const data = await response.json()
 
-        // Normalize data structure
         const normalizedData = {
             reference: data.reference,
             verses: data.verses.map(v => ({
@@ -57,47 +72,32 @@ export async function getChapter(book, chapter, translation = 'web') {
             timestamp: Date.now()
         }
 
-        // Save to Cache
         const db = await dbPromise
         await db.put(STORE_NAME, normalizedData, key)
 
         return { ...normalizedData, sourcedFrom: 'network' }
+
     } catch (err) {
-        console.error('Network request failed:', err)
+        console.warn('Network failed, switching to offline mode:', err)
 
         // --- Fallback to Local JSON (Offline Mode) ---
-        console.log("Attempting to load local offline bible...")
         try {
-            // Lazy load the local JSON if not already loaded
             if (!window.localBibleData) {
                 const res = await fetch('/kjv.json')
                 if (!res.ok) throw new Error("Local Bible data not found")
                 window.localBibleData = await res.json()
             }
 
-            const localBookString = book.replace(/\s+/g, '').toLowerCase() // simple normalization
+            const cleanBook = book.toLowerCase().replace(/\s+/g, '')
+            const abbrev = BOOK_MAPPING[cleanBook] || cleanBook.substring(0, 2)
 
-            // Note: The structure of the JSON depends on the source. 
-            // Assuming the common format: array of books or object with book names keys.
-            // We will verify the structure once downloaded. For now implementing a search.
-
-            // ADAPTER: Adapt based on specific JSON format (usually 'books' array)
-            // Let's assume the seven1m format: Array of objects { name: "Genesis", chapters: [...] }
-            let foundBook = null;
-
-            if (Array.isArray(window.localBibleData)) {
-                foundBook = window.localBibleData.find(b =>
-                    b.name.toLowerCase().replace(/\s+/g, '') === localBookString ||
-                    b.name.toLowerCase().startsWith(localBookString)
-                )
-            }
+            const foundBook = window.localBibleData.find(b => b.abbrev === abbrev)
 
             if (foundBook && foundBook.chapters && foundBook.chapters[chapter - 1]) {
                 const chapterVerses = foundBook.chapters[chapter - 1]
 
-                // Normalize to expected format
                 return {
-                    reference: `${foundBook.name} ${chapter}`,
+                    reference: `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}`,
                     verses: chapterVerses.map((text, index) => ({
                         verse: index + 1,
                         text: text
@@ -110,7 +110,7 @@ export async function getChapter(book, chapter, translation = 'web') {
 
         } catch (localErr) {
             console.error("Offline fallback failed:", localErr)
-            throw new Error('Offline and content not available.')
+            throw new Error('Offline content unavailable. Please connect to internet.')
         }
     }
 }

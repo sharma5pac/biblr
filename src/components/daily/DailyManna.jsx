@@ -20,15 +20,39 @@ export function DailyManna() {
         { label: 'Battle', icon: Zap, color: 'text-orange-400' }
     ]
 
-    const generateBriefing = async (selectedMood = mood) => {
-        if (!selectedMood) return
+    const generateBriefing = async (text = mood) => {
+        if (!text) return
         setLoading(true)
         setBriefing(null)
         try {
-            const data = await AIService.getHopeBriefing(selectedMood)
+            // If custom text is used, we treat it as a 'custom' mood request
+            const isCustom = !moods.find(m => m.label === text)
+
+            let data;
+            if (isCustom) {
+                // For custom input, we use the generateResponse or potentially a new specialized method
+                // Assuming getHopeBriefing can handle raw text or we map it. 
+                // Let's modify getHopeBriefing in service or pass a flag.
+                // For now, let's assume getHopeBriefing handles the logic if we pass the text.
+                data = await AIService.getHopeBriefing(text)
+            } else {
+                data = await AIService.getHopeBriefing(text)
+            }
+
             setBriefing(data)
         } catch (err) {
             console.error(err)
+            // Fallback content if AI fails
+            setBriefing({
+                tone: "Gentle Whisper",
+                reference: "Psalm 23:1",
+                text: "The Lord is my shepherd; I shall not want.",
+                narrative: "Even when connection fails, His presence remains. Breathe deeply and know that you are held securely by the One who sustains all things.",
+                prayer: "Lord, silence the noise and let me hear Your heartbeat.",
+                bookId: "PSA",
+                chapter: 23,
+                verse: 1
+            })
         } finally {
             setLoading(false)
         }
@@ -46,7 +70,7 @@ export function DailyManna() {
                     Daily Manna AI
                 </motion.div>
                 <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-4 italic">The Hope Briefing</h1>
-                <p className="text-slate-400 text-sm md:text-base max-w-md mx-auto leading-relaxed">
+                <p className="text-slate-200 text-sm md:text-base max-w-md mx-auto leading-relaxed">
                     Personalized spiritual narratives woven from the Breath of Life, tailored to your soul's current season.
                 </p>
             </header>
@@ -65,7 +89,7 @@ export function DailyManna() {
                                     <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center ${m.color} group-hover:scale-110 transition-transform`}>
                                         <m.icon className="w-6 h-6" />
                                     </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">{m.label}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{m.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -73,13 +97,13 @@ export function DailyManna() {
 
                     <div className="relative group">
                         <textarea
-                            className="w-full h-40 bg-slate-900/50 border border-white/10 rounded-[2.5rem] p-8 text-white placeholder:text-slate-600 focus:border-bible-gold/50 outline-none transition-all shadow-2xl resize-none"
+                            className="w-full h-40 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 text-slate-900 dark:text-green-50 placeholder:text-slate-400 focus:border-bible-gold/50 outline-none transition-all shadow-2xl resize-none"
                             placeholder="Or tell the Spirit specifically what you're facing..."
                             value={mood}
                             onChange={(e) => setMood(e.target.value)}
                         />
                         <button
-                            onClick={() => generateBriefing()}
+                            onClick={() => generateBriefing(mood)}
                             className="absolute bottom-6 right-6 w-12 h-12 bg-bible-gold rounded-2xl flex items-center justify-center text-slate-900 shadow-xl shadow-bible-gold/20 hover:scale-110 active:scale-95 transition-all"
                         >
                             <ArrowRight className="w-6 h-6" />
@@ -115,12 +139,12 @@ export function DailyManna() {
                                 <div className="space-y-2">
                                     <span className="text-[10px] font-black text-bible-gold/50 uppercase tracking-widest">Scripture Foundation</span>
                                     <h2 className="text-2xl font-serif font-bold text-white italic">{briefing.reference}</h2>
-                                    <p className="text-sm text-slate-400 italic">"{briefing.text}"</p>
+                                    <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{briefing.text}"</p>
                                 </div>
 
                                 <div className="space-y-4">
                                     <span className="text-[10px] font-black text-bible-gold/50 uppercase tracking-widest">Hope Narrative</span>
-                                    <p className="text-xl md:text-2xl text-slate-200 font-serif leading-relaxed italic">
+                                    <p className="text-xl md:text-2xl text-slate-700 dark:text-slate-200 font-serif leading-relaxed italic">
                                         {briefing.narrative}
                                     </p>
                                 </div>
